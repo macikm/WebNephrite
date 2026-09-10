@@ -14,6 +14,25 @@ import { DocumentsView } from "@/components/DocumentsView";
 import { SettingsView } from "@/components/SettingsView";
 import { Invoice, Product, Order, Customer, JobOrder, JobTask, DocumentItem, UserInfo } from "@/types/helios";
 
+// Helper to safely extract an array from Helios responses (handles both direct arrays and wrapped objects like { products: [...] })
+function extractArray<T>(data: unknown, preferredKey?: string): T[] {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data)) return data as T[];
+
+  const record = data as Record<string, unknown>;
+  if (preferredKey && Array.isArray(record[preferredKey])) {
+    return record[preferredKey] as T[];
+  }
+
+  // Find first array property
+  for (const key of Object.keys(record)) {
+    if (Array.isArray(record[key])) {
+      return record[key] as T[];
+    }
+  }
+  return [];
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [currentTab, setCurrentTab] = useState<TabId>("dashboard");
@@ -34,78 +53,75 @@ export default function HomePage() {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [invoiceSubtype, setInvoiceSubtype] = useState<"issued" | "received">("issued");
 
-  // Load all ERP data from Helios
-  const loadErpData = useCallback(async () => {
-    setIsLoadingData(true);
+  // Track loaded tabs to avoid duplicate fetching
+  const [loadedTabs, setLoadedTabs] = useState<Record<string, boolean>>({});
+
+  // Helper fetcher
+  const fetchModule = async (endpoint: string, key: string) => {
     try {
-      const [
-        resInvIssued,
-        resInvReceived,
-        resProducts,
-        resOrdRec,
-        resOrdIss,
-        resCust,
-        resJobs,
-        resTasks,
-        resDocs,
-      ] = await Promise.allSettled([
-        fetch("/api/helios/v1/invoices/invoicesIssued"),
-        fetch("/api/helios/v1/invoices/invoicesReceived"),
-        fetch("/api/helios/v1/eshop/products"),
-        fetch("/api/helios/v1/warehouse/ordersReceived"),
-        fetch("/api/helios/v1/warehouse/ordersIssued"),
-        fetch("/api/helios/v1/eshop/customers"),
-        fetch("/api/helios/v1/jobOrder/jobOrders"),
-        fetch("/api/helios/v1/jobOrder/tasks"),
-        fetch("/api/helios/v1/Documents/DMSDocuments"),
-      ]);
-
-      if (resInvIssued.status === "fulfilled" && resInvIssued.value.ok) {
-        const data = await resInvIssued.value.json().catch(() => []);
-        setInvoicesIssued(Array.isArray(data) ? data : []);
-      }
-
-      if (resInvReceived.status === "fulfilled" && resInvReceived.value.ok) {
-        const data = await resInvReceived.value.json().catch(() => []);
-        setInvoicesReceived(Array.isArray(data) ? data : []);
-      }
-
-      if (resProducts.status === "fulfilled" && resProducts.value.ok) {
-        const data = await resProducts.value.json().catch(() => []);
-        setProducts(Array.isArray(data) ? data : []);
-      }
-
-      if (resOrdRec.status === "fulfilled" && resOrdRec.value.ok) {
-        const data = await resOrdRec.value.json().catch(() => []);
-        setOrdersReceived(Array.isArray(data) ? data : []);
-      }
-
-      if (resOrdIss.status === "fulfilled" && resOrdIss.value.ok) {
-        const data = await resOrdIss.value.json().catch(() => []);
-        setOrdersIssued(Array.isArray(data) ? data : []);
-      }
-
-      if (resCust.status === "fulfilled" && resCust.value.ok) {
-        const data = await resCust.value.json().catch(() => []);
-        setCustomers(Array.isArray(data) ? data : []);
-      }
-
-      if (resJobs.status === "fulfilled" && resJobs.value.ok) {
-        const data = await resJobs.value.json().catch(() => []);
-        setJobOrders(Array.isArray(data) ? data : []);
-      }
-
-      if (resTasks.status === "fulfilled" && resTasks.value.ok) {
-        const data = await resTasks.value.json().catch(() => []);
-        setTasks(Array.isArray(data) ? data : []);
-      }
-
-      if (resDocs.status === "fulfilled" && resDocs.value.ok) {
-        const data = await resDocs.value.json().catch(() => []);
-        setDocuments(Array.isArray(data) ? data : []);
+      const res = await fetch(`/api/helios/${endpoint}`);
+      if (res.ok) {
+        const json = await res.json();
+        return extractArray(json, key);
       }
     } catch (err) {
-      console.error("Error loading ERP datasets:", err);
+      console.error(`Error loading ${endpoint}:`, err);
+    }
+    return [];
+  };
+
+  // Load data for a specific tab or dashboard
+  const loadDataForTab = useCallback(async (tab: TabId, force = false) => {
+    setIsLoadingData(true);
+    try {
+      if (tab === "dashboard" || force) {
+        // Load dashboard essentials
+        const [issued, received, prods] = await Promise.all([
+          fetchModule("v1/invoices/invoicesIssued", "invoicesIssued"),
+          fetchModule("v1/invoices/invoicesReceived", "invoicesReceived"),
+          fetchModule("v1/eshop/products", "products"),
+        ]);
+        setInvoicesIssued(issued as Invoice[]);
+        setInvoicesReceived(received as Invoice[]);
+        setProducts(prods as Product[]);
+        setLoadedTabs(prev => ({ ...prev, dashboard: true, invoices_issued: true, invoices_received: true, products: true }));
+      } else if (tab === "invoices_issued" || tab === "invoices_received") {
+        const [issued, received] = await Promise.all([
+          fetchModule("v1/invoices/invoicesIssued", "invoicesIssued"),
+          fetchModule("v1/invoices/invoicesReceived", "invoicesReceived"),
+        ]);
+        setInvoicesIssued(issued as Invoice[]);
+        setInvoicesReceived(received as Invoice[]);
+        setLoadedTabs(prev => ({ ...prev, invoices_issued: true, invoices_received: true }));
+      } else if (tab === "products") {
+        const prods = await fetchModule("v1/eshop/products", "products");
+        setProducts(prods as Product[]);
+        setLoadedTabs(prev => ({ ...prev, products: true }));
+      } else if (tab === "orders") {
+        const [rec, iss] = await Promise.all([
+          fetchModule("v1/warehouse/ordersReceived", "ordersReceived"),
+          fetchModule("v1/warehouse/ordersIssued", "ordersIssued"),
+        ]);
+        setOrdersReceived(rec as Order[]);
+        setOrdersIssued(iss as Order[]);
+        setLoadedTabs(prev => ({ ...prev, orders: true }));
+      } else if (tab === "customers") {
+        const cust = await fetchModule("v1/eshop/customers", "customers");
+        setCustomers(cust as Customer[]);
+        setLoadedTabs(prev => ({ ...prev, customers: true }));
+      } else if (tab === "jobs") {
+        const [jobs, jTasks] = await Promise.all([
+          fetchModule("v1/jobOrder/jobOrders", "jobOrders"),
+          fetchModule("v1/jobOrder/tasks", "tasks"),
+        ]);
+        setJobOrders(jobs as JobOrder[]);
+        setTasks(jTasks as JobTask[]);
+        setLoadedTabs(prev => ({ ...prev, jobs: true }));
+      } else if (tab === "documents") {
+        const docs = await fetchModule("v1/Documents/DMSDocuments", "documents");
+        setDocuments(docs as DocumentItem[]);
+        setLoadedTabs(prev => ({ ...prev, documents: true }));
+      }
     } finally {
       setIsLoadingData(false);
     }
@@ -127,13 +143,24 @@ export default function HomePage() {
         }
         setUserInfo(data.user);
         setIsAuthChecking(false);
-        loadErpData();
+        loadDataForTab("dashboard");
       } catch {
         router.push("/login");
       }
     }
     checkAuth();
-  }, [router, loadErpData]);
+  }, [router, loadDataForTab]);
+
+  // Handle tab switching and on-demand loading
+  const handleSelectTab = (tab: TabId) => {
+    setCurrentTab(tab);
+    if (tab === "invoices_issued") setInvoiceSubtype("issued");
+    if (tab === "invoices_received") setInvoiceSubtype("received");
+
+    if (!loadedTabs[tab]) {
+      loadDataForTab(tab);
+    }
+  };
 
   if (isAuthChecking) {
     return (
@@ -185,11 +212,7 @@ export default function HomePage() {
       {/* Fixed Sidebar */}
       <Sidebar
         currentTab={currentTab}
-        onSelectTab={(tab) => {
-          setCurrentTab(tab);
-          if (tab === "invoices_issued") setInvoiceSubtype("issued");
-          if (tab === "invoices_received") setInvoiceSubtype("received");
-        }}
+        onSelectTab={handleSelectTab}
         dbProfile={userInfo?.dbprofile || "Demo"}
       />
 
@@ -199,7 +222,7 @@ export default function HomePage() {
           title={getTitle()}
           userName={userInfo?.userName || "tester"}
           dbProfile={userInfo?.dbprofile || "Demo"}
-          onRefresh={loadErpData}
+          onRefresh={() => loadDataForTab(currentTab, true)}
           isRefreshing={isLoadingData}
         />
 
@@ -210,11 +233,7 @@ export default function HomePage() {
               invoicesReceived={invoicesReceived}
               products={products}
               userInfo={userInfo}
-              onNavigate={(tab) => {
-                setCurrentTab(tab);
-                if (tab === "invoices_issued") setInvoiceSubtype("issued");
-                if (tab === "invoices_received") setInvoiceSubtype("received");
-              }}
+              onNavigate={handleSelectTab}
               isLoading={isLoadingData}
             />
           )}
