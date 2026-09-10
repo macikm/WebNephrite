@@ -1,0 +1,24 @@
+services:
+  webnephrite:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: webnephrite:latest
+    container_name: webnephrite
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=Europe/Prague
+      - HELIOS_API_URL=${HELIOS_API_URL:-https://demo-api.helios.eu}
+      - HELIOS_SERVER_URL=${HELIOS_SERVER_URL:-https://open.helios.eu/DemoNephrite}
+      - HELIOS_DB_PROFILE=${HELIOS_DB_PROFILE:-Demo}
+      - HELIOS_LANGUAGE_ID=${HELIOS_LANGUAGE_ID:-CZ}
+    networks:
+      - infrastructure_default
+    ports:
+      - "${HOST_PORT:-8089}:3000"
+
+networks:
+  infrastructure_default:
+    external: true
