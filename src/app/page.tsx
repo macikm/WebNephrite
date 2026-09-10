@@ -12,7 +12,7 @@ import { CustomersView } from "@/components/CustomersView";
 import { JobsView } from "@/components/JobsView";
 import { DocumentsView } from "@/components/DocumentsView";
 import { SettingsView } from "@/components/SettingsView";
-import { Invoice, Product, Order, Customer, JobOrder, JobTask, DocumentItem, UserInfo } from "@/types/helios";
+import { Invoice, Product, Order, Customer, ContactPerson, JobOrder, JobTask, DocumentItem, UserInfo } from "@/types/helios";
 
 // Helper to safely extract an array from Helios responses (handles both direct arrays and wrapped objects like { products: [...] })
 function extractArray<T>(data: unknown, preferredKey?: string): T[] {
@@ -46,6 +46,7 @@ export default function HomePage() {
   const [ordersReceived, setOrdersReceived] = useState<Order[]>([]);
   const [ordersIssued, setOrdersIssued] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [contacts, setContacts] = useState<ContactPerson[]>([]);
   const [jobOrders, setJobOrders] = useState<JobOrder[]>([]);
   const [tasks, setTasks] = useState<JobTask[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -106,8 +107,12 @@ export default function HomePage() {
         setOrdersIssued(iss as Order[]);
         setLoadedTabs(prev => ({ ...prev, orders: true }));
       } else if (tab === "customers") {
-        const cust = await fetchModule("v1/eshop/customers", "customers");
+        const [cust, cont] = await Promise.all([
+          fetchModule("v1/eshop/customers", "customers"),
+          fetchModule("v1/general/contacts", "contacts"),
+        ]);
         setCustomers(cust as Customer[]);
+        setContacts(cont as ContactPerson[]);
         setLoadedTabs(prev => ({ ...prev, customers: true }));
       } else if (tab === "jobs") {
         const [jobs, jTasks] = await Promise.all([
@@ -269,6 +274,7 @@ export default function HomePage() {
           {currentTab === "customers" && (
             <CustomersView
               customers={customers}
+              contacts={contacts}
               isLoading={isLoadingData}
             />
           )}

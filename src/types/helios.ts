@@ -132,6 +132,28 @@ export interface Customer {
   web?: string;
 }
 
+export interface ContactPerson {
+  id: number;
+  number?: string;
+  reference?: string;
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  titlePre?: string;
+  titlePost?: string;
+  phone?: string;
+  mobilePhone?: string;
+  email?: string;
+  position?: string;
+  status?: string;
+  company?: {
+    id?: number;
+    number?: string;
+    name?: string;
+  };
+  note?: string;
+}
+
 export interface JobOrder {
   id: number;
   number: string;

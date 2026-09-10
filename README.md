@@ -28,9 +28,10 @@ Aplikace poskytuje ucelené řešení pro každodenní správu firmy – od fina
   - Evidence přijatých i vydaných objednávek.
   - Sledování stavu zpracování, termínů dodání a částek.
 
-- 👥 **Adresář zákazníků a partnerů (CRM):**
-  - Přehled odběratelů a dodavatelů, IČO, DIČ, sídlo firmy.
-  - Rychlé proklikové kontakty na telefon a e-mail.
+- 👥 **Adresář zákazníků, partnerů a kontaktních osob (CRM):**
+  - **Firmy & Partneři:** Přehled odběratelů a dodavatelů, IČO, DIČ, sídlo firmy.
+  - **Kontaktní osoby:** Evidence kontaktních osob (`/api/v1/general/contacts`), pracovní pozice/funkce, navázaná společnost, přímé volání na telefon a mobil, e-mail a detail karty kontaktu.
+  - Rychlé fulltextové vyhledávání v obou pohledech.
 
 - 💼 **Zakázky a plnění úkolů:**
   - Sledování projektů/zakázek, zahájení a termínů ukončení.
