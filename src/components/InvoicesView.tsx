@@ -11,9 +11,18 @@ import {
   Building, 
   CreditCard, 
   Calendar, 
-  FileText,
-  DollarSign
+  Eye
 } from "lucide-react";
+import { SortableHeader } from "./SortableHeader";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { 
+  SortDirection, 
+  sortData, 
+  safeString, 
+  safeNumber, 
+  safeDate, 
+  safeCurrency 
+} from "@/lib/table-utils";
 
 interface InvoicesViewProps {
   invoicesIssued: Invoice[];
@@ -34,438 +43,490 @@ export function InvoicesView({
   const [statusFilter, setStatusFilter] = useState<"all" | "unpaid" | "paid">("all");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string | null>("issueDate");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
   const currentList = activeType === "issued" ? invoicesIssued : invoicesReceived;
 
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(prev => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  };
+
+  // Filter
   const filteredInvoices = currentList.filter((inv) => {
     const term = search.toLowerCase().trim();
-    const matchesSearch = 
-      !term ||
-      (inv.number && inv.number.toLowerCase().includes(term)) ||
-      (inv.invoiceNo && inv.invoiceNo.toLowerCase().includes(term)) ||
-      (inv.variableSymbol && inv.variableSymbol.includes(term)) ||
-      (inv.customer?.name && inv.customer.name.toLowerCase().includes(term));
+    const invoiceNum = safeString(inv.invoiceNo || inv.number, "").toLowerCase();
+    const vs = safeString(inv.variableSymbol, "").toLowerCase();
+    const custName = safeString(inv.customer?.name, "").toLowerCase();
 
+    const matchesSearch = !term || invoiceNum.includes(term) || vs.includes(term) || custName.includes(term);
+
+    const isPaid = inv.invPaymentStatusCode === "paid";
     const matchesStatus = 
       statusFilter === "all" ||
-      (statusFilter === "unpaid" && inv.invPaymentStatusCode === "unpaid") ||
-      (statusFilter === "paid" && inv.invPaymentStatusCode === "paid");
+      (statusFilter === "unpaid" && !isPaid) ||
+      (statusFilter === "paid" && isPaid);
 
     return matchesSearch && matchesStatus;
   });
 
-  const totalAmount = filteredInvoices.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0);
-  const totalOutstanding = filteredInvoices.reduce((sum, i) => sum + (Number(i.outstandingAmount) || 0), 0);
+  // Sort
+  const sortedInvoices = sortData(filteredInvoices, sortKey, sortDirection);
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK", maximumFractionDigits: 2 }).format(val);
-  };
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "—";
-    try {
-      return new Date(dateStr).toLocaleDateString("cs-CZ");
-    } catch {
-      return dateStr;
-    }
-  };
+  const totalAmount = filteredInvoices.reduce((sum, i) => sum + safeNumber(i.totalAmount, 0), 0);
+  const totalOutstanding = filteredInvoices.reduce((sum, i) => sum + safeNumber(i.outstandingAmount, 0), 0);
 
   return (
-    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {/* Type Toggle & Search Controls */}
-      <div className="glass-panel" style={{ padding: "1.25rem 1.5rem" }}>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "1rem",
-        }}>
-          {/* Subtabs */}
-          <div style={{ display: "flex", gap: "0.5rem", background: "rgba(10, 15, 25, 0.7)", padding: "0.25rem", borderRadius: "var(--radius-md)" }}>
-            <button
-              onClick={() => onChangeType("issued")}
-              className={`btn ${activeType === "issued" ? "btn-primary" : "btn-secondary"}`}
-              style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
-            >
-              <span>Vydané faktury ({invoicesIssued.length})</span>
-            </button>
-            <button
-              onClick={() => onChangeType("received")}
-              className={`btn ${activeType === "received" ? "btn-primary" : "btn-secondary"}`}
-              style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
-            >
-              <span>Přijaté faktury ({invoicesReceived.length})</span>
-            </button>
-          </div>
-
-          {/* Search and Filters */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: "1 1 340px", maxWidth: "550px" }}>
-            <div style={{ position: "relative", flex: 1 }}>
-              <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
-              <input
-                type="text"
-                className="input-control"
-                style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
-                placeholder="Hledat podle čísla, VS, odběratele..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-              <Filter size={15} style={{ color: "var(--text-dim)" }} />
-              <select
-                className="input-control"
-                style={{ fontSize: "0.85rem", width: "auto" }}
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-              >
-                <option value="all">Všechny stavy</option>
-                <option value="unpaid">Neuhrazené</option>
-                <option value="paid">Uhrazené</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Totals Summary */}
-        <div style={{
-          marginTop: "1.25rem",
-          paddingTop: "1rem",
-          borderTop: "1px solid var(--border-subtle)",
-          display: "flex",
-          alignItems: "center",
-          gap: "2rem",
-          fontSize: "0.85rem",
-        }}>
-          <div>
-            <span style={{ color: "var(--text-muted)" }}>Zobrazeno záznamů: </span>
-            <strong style={{ color: "var(--text-main)" }}>{filteredInvoices.length}</strong>
-          </div>
-          <div>
-            <span style={{ color: "var(--text-muted)" }}>Fakturovaná částka: </span>
-            <strong style={{ color: "var(--brand-primary)" }}>{formatCurrency(totalAmount)}</strong>
-          </div>
-          <div>
-            <span style={{ color: "var(--text-muted)" }}>Zbývá uhradit: </span>
-            <strong style={{ color: totalOutstanding > 0 ? "var(--accent-rose)" : "var(--status-paid)" }}>
-              {formatCurrency(totalOutstanding)}
-            </strong>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Table */}
-      <div className="glass-panel" style={{ padding: "1.25rem" }}>
-        <div className="table-wrapper">
-          <table className="erp-table">
-            <thead>
-              <tr>
-                <th>Číslo dokladu</th>
-                <th>Variabilní symbol</th>
-                <th>Partner / Klient</th>
-                <th>Vystaveno</th>
-                <th>Splatnost</th>
-                <th>Celková částka</th>
-                <th>Zbývá uhradit</th>
-                <th>Stav úhrady</th>
-                <th>Akce</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "var(--text-dim)" }}>
-                    Načítám faktury z Helios Nephrite...
-                  </td>
-                </tr>
-              ) : filteredInvoices.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "var(--text-dim)" }}>
-                    Nebyly nalezeny žádné faktury odpovídající zadaným kritériím.
-                  </td>
-                </tr>
-              ) : (
-                filteredInvoices.map((inv) => {
-                  const isPaid = inv.invPaymentStatusCode === "paid";
-                  return (
-                    <tr key={inv.id}>
-                      <td style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                        {inv.invoiceNo || inv.number}
-                      </td>
-                      <td style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
-                        {inv.variableSymbol || "—"}
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{inv.customer?.name || "Nespecifikováno"}</div>
-                        {inv.tin && <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>IČ/DIČ: {inv.tin}</div>}
-                      </td>
-                      <td style={{ color: "var(--text-muted)" }}>{formatDate(inv.issueDate)}</td>
-                      <td style={{ color: !isPaid ? "var(--accent-amber)" : "var(--text-muted)", fontWeight: !isPaid ? 600 : 400 }}>
-                        {formatDate(inv.dueDate)}
-                      </td>
-                      <td style={{ fontWeight: 700 }}>
-                        {formatCurrency(inv.totalAmount)}
-                      </td>
-                      <td style={{ fontWeight: 600, color: inv.outstandingAmount > 0 ? "var(--accent-rose)" : "var(--status-paid)" }}>
-                        {formatCurrency(inv.outstandingAmount)}
-                      </td>
-                      <td>
-                        {isPaid ? (
-                          <span className="badge badge-paid">
-                            <CheckCircle2 size={12} />
-                            <span>Uhrazeno</span>
-                          </span>
-                        ) : (
-                          <span className="badge badge-unpaid">
-                            <Clock size={12} />
-                            <span>K úhradě</span>
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => setSelectedInvoice(inv)}
-                          className="btn btn-secondary"
-                          style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem" }}
-                        >
-                          Detail
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Detail Modal */}
-      {selectedInvoice && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0, 0, 0, 0.75)",
-          backdropFilter: "blur(6px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 50,
-          padding: "1.5rem",
-        }}>
-          <div className="glass-panel animate-fade-in" style={{
-            width: "100%",
-            maxWidth: "650px",
-            maxHeight: "90vh",
-            overflowY: "auto",
-            padding: "2rem",
-            position: "relative",
-            background: "rgba(18, 26, 42, 0.98)",
-            boxShadow: "0 25px 50px rgba(0,0,0,0.7), 0 0 1px rgba(255,255,255,0.2)",
+    <ErrorBoundary fallbackTitle="Chyba při zobrazení faktur">
+      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        {/* Type Toggle & Search Controls */}
+        <div className="glass-panel" style={{ padding: "1.25rem 1.5rem" }}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "1rem",
           }}>
-            {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
-              <div>
-                <div style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--brand-primary)", fontWeight: 700, letterSpacing: "0.05em" }}>
-                  {activeType === "issued" ? "Vydaná faktura" : "Přijatá faktura"}
-                </div>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: 800, marginTop: "0.2rem" }}>
-                  {selectedInvoice.invoiceNo || selectedInvoice.number}
-                </h2>
-              </div>
+            {/* Subtabs */}
+            <div style={{ display: "flex", gap: "0.5rem", background: "rgba(10, 15, 25, 0.7)", padding: "0.25rem", borderRadius: "var(--radius-md)" }}>
               <button
-                onClick={() => setSelectedInvoice(null)}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "rgba(255,255,255,0.06)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--text-muted)",
-                }}
+                onClick={() => onChangeType("issued")}
+                className={`btn ${activeType === "issued" ? "btn-primary" : "btn-secondary"}`}
+                style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
               >
-                <X size={18} />
+                <span>Vydané faktury ({invoicesIssued.length})</span>
+              </button>
+              <button
+                onClick={() => onChangeType("received")}
+                className={`btn ${activeType === "received" ? "btn-primary" : "btn-secondary"}`}
+                style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
+              >
+                <span>Přijaté faktury ({invoicesReceived.length})</span>
               </button>
             </div>
 
-            {/* Content Details */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              {/* Partner & Bank info */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "1rem",
-                background: "rgba(10, 15, 25, 0.6)",
-                padding: "1rem",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--border-subtle)",
-              }}>
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                    <Building size={13} />
-                    <span>Odběratel / Partner</span>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.25rem" }}>
-                    {selectedInvoice.customer?.name || "Nezadáno"}
-                  </div>
-                  {selectedInvoice.tin && (
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.1rem" }}>
-                      IČ/DIČ: {selectedInvoice.tin}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                    <CreditCard size={13} />
-                    <span>Platební údaje</span>
-                  </div>
-                  <div style={{ fontSize: "0.85rem", marginTop: "0.25rem" }}>
-                    VS: <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedInvoice.variableSymbol || "—"}</strong>
-                  </div>
-                  {selectedInvoice.bankAccount && (
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.1rem" }}>
-                      Účet: {selectedInvoice.bankAccount.accountNo}/{selectedInvoice.bankAccount.bankCode}
-                    </div>
-                  )}
-                </div>
+            {/* Search and Filters */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: "1 1 340px", maxWidth: "550px" }}>
+              <div style={{ position: "relative", flex: 1 }}>
+                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+                <input
+                  type="text"
+                  className="input-control"
+                  style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
+                  placeholder="Hledat podle čísla, VS, odběratele..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
 
-              {/* Dates & Timeline */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: "0.75rem",
-                fontSize: "0.825rem",
-              }}>
-                <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)" }}>
-                  <div style={{ color: "var(--text-dim)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                    <Calendar size={12} />
-                    <span>Datum vystavení</span>
-                  </div>
-                  <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{formatDate(selectedInvoice.issueDate)}</div>
-                </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <Filter size={15} style={{ color: "var(--text-dim)" }} />
+                <select
+                  className="input-control"
+                  style={{ fontSize: "0.85rem", width: "auto" }}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                >
+                  <option value="all">Všechny stavy</option>
+                  <option value="unpaid">Neuhrazené</option>
+                  <option value="paid">Uhrazené</option>
+                </select>
+              </div>
+            </div>
+          </div>
 
-                <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)" }}>
-                  <div style={{ color: "var(--text-dim)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                    <Calendar size={12} />
-                    <span>Datum splatnosti</span>
-                  </div>
-                  <div style={{ fontWeight: 600, marginTop: "0.2rem", color: selectedInvoice.invPaymentStatusCode === "unpaid" ? "var(--accent-rose)" : "inherit" }}>
-                    {formatDate(selectedInvoice.dueDate)}
-                  </div>
-                </div>
+          {/* Totals Summary */}
+          <div style={{
+            marginTop: "1.25rem",
+            paddingTop: "1rem",
+            borderTop: "1px solid var(--border-subtle)",
+            display: "flex",
+            alignItems: "center",
+            gap: "2rem",
+            fontSize: "0.85rem",
+            flexWrap: "wrap",
+          }}>
+            <div>
+              <span style={{ color: "var(--text-muted)" }}>Zobrazeno záznamů: </span>
+              <strong style={{ color: "var(--text-main)" }}>{filteredInvoices.length}</strong>
+            </div>
+            <div>
+              <span style={{ color: "var(--text-muted)" }}>Fakturovaná částka: </span>
+              <strong style={{ color: "var(--brand-primary)" }}>{safeCurrency(totalAmount)}</strong>
+            </div>
+            <div>
+              <span style={{ color: "var(--text-muted)" }}>Zbývá uhradit: </span>
+              <strong style={{ color: totalOutstanding > 0 ? "var(--accent-rose)" : "var(--status-paid)" }}>
+                {safeCurrency(totalOutstanding)}
+              </strong>
+            </div>
+          </div>
+        </div>
 
-                <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)" }}>
-                  <div style={{ color: "var(--text-dim)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                    <Calendar size={12} />
-                    <span>DUZP</span>
+        {/* Main Table with Horizontal Scroll */}
+        <div className="glass-panel" style={{ padding: "1.25rem" }}>
+          <div className="table-wrapper">
+            <table className="erp-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "85px", textAlign: "center" }}>Detail</th>
+                  <SortableHeader
+                    label="Číslo dokladu"
+                    columnKey="invoiceNo"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    label="Variabilní symbol"
+                    columnKey="variableSymbol"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    label="Partner / Klient"
+                    columnKey="customer.name"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    label="Vystaveno"
+                    columnKey="issueDate"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    label="Splatnost"
+                    columnKey="dueDate"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    label="Celková částka"
+                    columnKey="totalAmount"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    label="Zbývá uhradit"
+                    columnKey="outstandingAmount"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    label="Stav úhrady"
+                    columnKey="invPaymentStatusCode"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "var(--text-dim)" }}>
+                      Načítám faktury z Helios Nephrite...
+                    </td>
+                  </tr>
+                ) : sortedInvoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "var(--text-dim)" }}>
+                      Nebyly nalezeny žádné faktury odpovídající zadaným kritériím.
+                    </td>
+                  </tr>
+                ) : (
+                  sortedInvoices.map((inv) => {
+                    const isPaid = inv.invPaymentStatusCode === "paid";
+                    const docNum = safeString(inv.invoiceNo || inv.number, `#${inv.id}`);
+                    const vs = safeString(inv.variableSymbol, "—");
+                    const partner = safeString(inv.customer?.name, "Nezadáno");
+                    const total = safeNumber(inv.totalAmount, 0);
+                    const outstanding = safeNumber(inv.outstandingAmount, 0);
+
+                    return (
+                      <tr key={inv.id}>
+                        {/* Detail in 1st column */}
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            onClick={() => setSelectedInvoice(inv)}
+                            className="btn btn-primary"
+                            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", gap: "0.3rem" }}
+                            title="Zobrazit detail faktury"
+                          >
+                            <Eye size={13} />
+                            <span>Detail</span>
+                          </button>
+                        </td>
+                        <td style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                          {docNum}
+                        </td>
+                        <td style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                          {vs}
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{partner}</div>
+                          {inv.tin && <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>IČ/DIČ: {safeString(inv.tin)}</div>}
+                        </td>
+                        <td style={{ color: "var(--text-muted)" }}>{safeDate(inv.issueDate)}</td>
+                        <td style={{ color: !isPaid ? "var(--accent-amber)" : "var(--text-muted)", fontWeight: !isPaid ? 600 : 400 }}>
+                          {safeDate(inv.dueDate)}
+                        </td>
+                        <td style={{ fontWeight: 700 }}>
+                          {safeCurrency(total)}
+                        </td>
+                        <td style={{ fontWeight: 600, color: outstanding > 0 ? "var(--accent-rose)" : "var(--status-paid)" }}>
+                          {safeCurrency(outstanding)}
+                        </td>
+                        <td>
+                          {isPaid ? (
+                            <span className="badge badge-paid">
+                              <CheckCircle2 size={12} />
+                              <span>Uhrazeno</span>
+                            </span>
+                          ) : (
+                            <span className="badge badge-unpaid">
+                              <Clock size={12} />
+                              <span>K úhradě</span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Robust Detail Modal */}
+        {selectedInvoice && (
+          <div 
+            className="modal-backdrop" 
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedInvoice(null);
+            }}
+          >
+            <div className="modal-dialog animate-fade-in" style={{ maxWidth: "680px", padding: "2rem" }}>
+              {/* Modal Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+                <div>
+                  <div style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--brand-primary)", fontWeight: 700, letterSpacing: "0.05em" }}>
+                    {activeType === "issued" ? "Vydaná faktura" : "Přijatá faktura"}
                   </div>
-                  <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{formatDate(selectedInvoice.vatDate)}</div>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: 800, marginTop: "0.2rem" }}>
+                    {safeString(selectedInvoice.invoiceNo || selectedInvoice.number, `#${selectedInvoice.id}`)}
+                  </h2>
                 </div>
+                <button
+                  onClick={() => setSelectedInvoice(null)}
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "8px",
+                    background: "rgba(255,255,255,0.08)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--text-muted)",
+                  }}
+                  title="Zavřít detail"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              {/* Job / Department metadata */}
-              {(selectedInvoice.jobOrder || selectedInvoice.department) && (
+              {/* Content Details */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                {/* Partner & Bank info */}
                 <div style={{
-                  display: "flex",
-                  gap: "1.5rem",
-                  fontSize: "0.825rem",
-                  color: "var(--text-muted)",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                  background: "rgba(10, 15, 25, 0.6)",
+                  padding: "1rem",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border-subtle)",
                 }}>
-                  {selectedInvoice.jobOrder && (
-                    <div>
-                      <span>Zakázka: </span>
-                      <strong style={{ color: "var(--text-main)" }}>
-                        {selectedInvoice.jobOrder.number} ({selectedInvoice.jobOrder.name})
-                      </strong>
+                  <div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                      <Building size={13} />
+                      <span>Odběratel / Partner</span>
                     </div>
-                  )}
-                  {selectedInvoice.department && (
-                    <div>
-                      <span>Středisko: </span>
-                      <strong style={{ color: "var(--text-main)" }}>
-                        {selectedInvoice.department.number} - {selectedInvoice.department.name}
-                      </strong>
+                    <div style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.25rem" }}>
+                      {safeString(selectedInvoice.customer?.name, "Nezadáno")}
                     </div>
-                  )}
-                </div>
-              )}
+                    {selectedInvoice.tin && (
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.1rem" }}>
+                        IČ/DIČ: {safeString(selectedInvoice.tin)}
+                      </div>
+                    )}
+                  </div>
 
-              {/* Note */}
-              {selectedInvoice.note && (
-                <div style={{
-                  padding: "0.75rem 1rem",
-                  background: "rgba(255,255,255,0.03)",
-                  borderRadius: "var(--radius-sm)",
-                  fontSize: "0.85rem",
-                  fontStyle: "italic",
-                  color: "var(--text-muted)",
-                }}>
-                  Poznámka: {selectedInvoice.note}
-                </div>
-              )}
-
-              {/* Amounts & Payment Status Card */}
-              <div style={{
-                marginTop: "0.5rem",
-                padding: "1.25rem",
-                borderRadius: "var(--radius-md)",
-                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.05))",
-                border: "1px solid rgba(16, 185, 129, 0.25)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}>
-                <div>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Stav dokladu:</div>
-                  <div style={{ marginTop: "0.25rem" }}>
-                    {selectedInvoice.invPaymentStatusCode === "paid" ? (
-                      <span className="badge badge-paid">
-                        <CheckCircle2 size={13} />
-                        <span>Faktura je kompletně uhrazena</span>
-                      </span>
-                    ) : (
-                      <span className="badge badge-unpaid">
-                        <Clock size={13} />
-                        <span>Neuhrazeno • Zbývá: {formatCurrency(selectedInvoice.outstandingAmount)}</span>
-                      </span>
+                  <div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                      <CreditCard size={13} />
+                      <span>Platební údaje</span>
+                    </div>
+                    <div style={{ fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                      VS: <strong style={{ fontFamily: "var(--font-mono)" }}>{safeString(selectedInvoice.variableSymbol, "—")}</strong>
+                    </div>
+                    {selectedInvoice.bankAccount && (
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.1rem" }}>
+                        Účet: {safeString(selectedInvoice.bankAccount.accountNo)}/{safeString(selectedInvoice.bankAccount.bankCode)}
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Celkem k úhradě:</div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--brand-primary)" }}>
-                    {formatCurrency(selectedInvoice.totalAmount)}
+                {/* Dates & Timeline */}
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: "0.75rem",
+                  fontSize: "0.825rem",
+                }}>
+                  <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)" }}>
+                    <div style={{ color: "var(--text-dim)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                      <Calendar size={12} />
+                      <span>Datum vystavení</span>
+                    </div>
+                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{safeDate(selectedInvoice.issueDate)}</div>
+                  </div>
+
+                  <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)" }}>
+                    <div style={{ color: "var(--text-dim)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                      <Calendar size={12} />
+                      <span>Datum splatnosti</span>
+                    </div>
+                    <div style={{ fontWeight: 600, marginTop: "0.2rem", color: selectedInvoice.invPaymentStatusCode === "unpaid" ? "var(--accent-rose)" : "inherit" }}>
+                      {safeDate(selectedInvoice.dueDate)}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)" }}>
+                    <div style={{ color: "var(--text-dim)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                      <Calendar size={12} />
+                      <span>DUZP</span>
+                    </div>
+                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{safeDate(selectedInvoice.vatDate)}</div>
                   </div>
                 </div>
-              </div>
 
-              {/* Actions */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.75rem" }}>
-                <button
-                  onClick={() => setSelectedInvoice(null)}
-                  className="btn btn-secondary"
-                >
-                  Zavřít
-                </button>
+                {/* Job / Department metadata */}
+                {(selectedInvoice.jobOrder || selectedInvoice.department) && (
+                  <div style={{
+                    display: "flex",
+                    gap: "1.5rem",
+                    fontSize: "0.825rem",
+                    color: "var(--text-muted)",
+                    flexWrap: "wrap",
+                  }}>
+                    {selectedInvoice.jobOrder && (
+                      <div>
+                        <span>Zakázka: </span>
+                        <strong style={{ color: "var(--text-main)" }}>
+                          {safeString(selectedInvoice.jobOrder.number)} ({safeString(selectedInvoice.jobOrder.name)})
+                        </strong>
+                      </div>
+                    )}
+                    {selectedInvoice.department && (
+                      <div>
+                        <span>Středisko: </span>
+                        <strong style={{ color: "var(--text-main)" }}>
+                          {safeString(selectedInvoice.department.number)} - {safeString(selectedInvoice.department.name)}
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Note */}
+                {selectedInvoice.note && typeof selectedInvoice.note === "string" && selectedInvoice.note.trim() && (
+                  <div style={{
+                    padding: "0.75rem 1rem",
+                    background: "rgba(255,255,255,0.03)",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "0.85rem",
+                    fontStyle: "italic",
+                    color: "var(--text-muted)",
+                  }}>
+                    Poznámka: {selectedInvoice.note}
+                  </div>
+                )}
+
+                {/* Amounts & Payment Status Card */}
+                <div style={{
+                  marginTop: "0.5rem",
+                  padding: "1.25rem",
+                  borderRadius: "var(--radius-md)",
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.05))",
+                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}>
+                  <div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Stav dokladu:</div>
+                    <div style={{ marginTop: "0.25rem" }}>
+                      {selectedInvoice.invPaymentStatusCode === "paid" ? (
+                        <span className="badge badge-paid">
+                          <CheckCircle2 size={13} />
+                          <span>Faktura je kompletně uhrazena</span>
+                        </span>
+                      ) : (
+                        <span className="badge badge-unpaid">
+                          <Clock size={13} />
+                          <span>Neuhrazeno • Zbývá: {safeCurrency(selectedInvoice.outstandingAmount)}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Celkem k úhradě:</div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--brand-primary)" }}>
+                      {safeCurrency(selectedInvoice.totalAmount)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.75rem" }}>
+                  <button
+                    onClick={() => setSelectedInvoice(null)}
+                    className="btn btn-secondary"
+                  >
+                    Zavřít
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }
