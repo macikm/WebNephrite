@@ -11,6 +11,7 @@ import {
   Package
 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
+import { Pagination } from "./Pagination";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { 
   SortDirection, 
@@ -32,6 +33,10 @@ export function ProductsView({ products, isLoading }: ProductsViewProps) {
   const [sortKey, setSortKey] = useState<string | null>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDirection(prev => (prev === "asc" ? "desc" : "asc"));
@@ -52,6 +57,11 @@ export function ProductsView({ products, isLoading }: ProductsViewProps) {
   });
 
   const sortedProducts = sortData(filteredProducts, sortKey, sortDirection);
+
+  const paginatedProducts = sortedProducts.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   return (
     <ErrorBoundary fallbackTitle="Chyba při zobrazení produktů">
@@ -172,7 +182,7 @@ export function ProductsView({ products, isLoading }: ProductsViewProps) {
                     </td>
                   </tr>
                 ) : (
-                  sortedProducts.map((prod) => (
+                  paginatedProducts.map((prod) => (
                     <tr key={prod.id}>
                       {/* Detail in 1st column */}
                       <td style={{ textAlign: "center" }}>
@@ -221,6 +231,17 @@ export function ProductsView({ products, isLoading }: ProductsViewProps) {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={sortedProducts.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </div>
 
         {/* Robust Product Detail Modal */}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { JobOrder, JobTask } from "@/types/helios";
 import { Search, Briefcase, CheckSquare, Clock, Eye, X, User } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
+import { Pagination } from "./Pagination";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SortDirection, sortData, safeString, safeNumber, safeDate } from "@/lib/table-utils";
 
@@ -22,6 +23,10 @@ export function JobsView({ jobOrders, tasks, isLoading }: JobsViewProps) {
   // Sorting
   const [sortKey, setSortKey] = useState<string | null>("number");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -45,6 +50,10 @@ export function JobsView({ jobOrders, tasks, isLoading }: JobsViewProps) {
   const sortedJobs = sortData(filteredJobs, sortKey, sortDirection);
   const sortedTasks = sortData(filteredTasks, sortKey, sortDirection);
 
+  const currentTotal = subType === "jobs" ? sortedJobs.length : sortedTasks.length;
+  const paginatedJobs = sortedJobs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedTasks = sortedTasks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <ErrorBoundary fallbackTitle="Chyba při zobrazení zakázek a úkolů">
       <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -52,14 +61,14 @@ export function JobsView({ jobOrders, tasks, isLoading }: JobsViewProps) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
             <div style={{ display: "flex", gap: "0.5rem", background: "rgba(10, 15, 25, 0.7)", padding: "0.25rem", borderRadius: "var(--radius-md)" }}>
               <button
-                onClick={() => { setSubType("jobs"); setSortKey("number"); }}
+                onClick={() => { setSubType("jobs"); setSortKey("number"); setCurrentPage(1); }}
                 className={`btn ${subType === "jobs" ? "btn-primary" : "btn-secondary"}`}
                 style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
               >
                 <span>Zakázky ({jobOrders.length})</span>
               </button>
               <button
-                onClick={() => { setSubType("tasks"); setSortKey("number"); }}
+                onClick={() => { setSubType("tasks"); setSortKey("number"); setCurrentPage(1); }}
                 className={`btn ${subType === "tasks" ? "btn-primary" : "btn-secondary"}`}
                 style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
               >
@@ -147,7 +156,7 @@ export function JobsView({ jobOrders, tasks, isLoading }: JobsViewProps) {
                       </td>
                     </tr>
                   ) : (
-                    sortedJobs.map((j) => (
+                    paginatedJobs.map((j) => (
                       <tr key={j.id}>
                         {/* Detail in 1st column */}
                         <td style={{ textAlign: "center" }}>
@@ -244,7 +253,7 @@ export function JobsView({ jobOrders, tasks, isLoading }: JobsViewProps) {
                       </td>
                     </tr>
                   ) : (
-                    sortedTasks.map((t) => (
+                    paginatedTasks.map((t) => (
                       <tr key={t.id}>
                         {/* Detail in 1st column */}
                         <td style={{ textAlign: "center" }}>
@@ -278,6 +287,17 @@ export function JobsView({ jobOrders, tasks, isLoading }: JobsViewProps) {
               </table>
             )}
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={currentTotal}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </div>
 
         {/* Robust Job Detail Modal */}

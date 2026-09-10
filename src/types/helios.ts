@@ -130,6 +130,8 @@ export interface Customer {
   phone?: string;
   email?: string;
   web?: string;
+  turnoverFV?: number;
+  turnoverFD?: number;
 }
 
 export interface ContactPerson {
@@ -183,8 +185,12 @@ export interface DocumentItem {
   id: number;
   name: string;
   documentNumber?: string;
+  reference?: string;
   createdOn?: string;
   description?: string;
   fileName?: string;
-  fileSize?: number;
+  fileContentLength?: number;
+  fileContent?: string; // Base64 content
+  location?: string;
+  state?: string;
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Order } from "@/types/helios";
 import { Search, ShoppingCart, Clock, CheckCircle2, Eye, X, Building, Calendar } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
+import { Pagination } from "./Pagination";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SortDirection, sortData, safeString, safeNumber, safeDate, safeCurrency } from "@/lib/table-utils";
 
@@ -21,6 +22,10 @@ export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersVi
   // Sorting
   const [sortKey, setSortKey] = useState<string | null>("orderDate");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const currentList = subType === "received" ? ordersReceived : ordersIssued;
 
@@ -43,6 +48,11 @@ export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersVi
 
   const sorted = sortData(filtered, sortKey, sortDirection);
 
+  const paginatedOrders = sorted.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   return (
     <ErrorBoundary fallbackTitle="Chyba při zobrazení objednávek">
       <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -51,14 +61,14 @@ export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersVi
             {/* Subtype toggle */}
             <div style={{ display: "flex", gap: "0.5rem", background: "rgba(10, 15, 25, 0.7)", padding: "0.25rem", borderRadius: "var(--radius-md)" }}>
               <button
-                onClick={() => { setSubType("received"); setSortKey("orderDate"); }}
+                onClick={() => { setSubType("received"); setSortKey("orderDate"); setCurrentPage(1); }}
                 className={`btn ${subType === "received" ? "btn-primary" : "btn-secondary"}`}
                 style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
               >
                 <span>Přijaté objednávky ({ordersReceived.length})</span>
               </button>
               <button
-                onClick={() => { setSubType("issued"); setSortKey("orderDate"); }}
+                onClick={() => { setSubType("issued"); setSortKey("orderDate"); setCurrentPage(1); }}
                 className={`btn ${subType === "issued" ? "btn-primary" : "btn-secondary"}`}
                 style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
               >
@@ -145,7 +155,7 @@ export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersVi
                     </td>
                   </tr>
                 ) : (
-                  sorted.map((order) => {
+                  paginatedOrders.map((order) => {
                     const client = safeString(order.customer?.name || order.customerName, "Běžný zákazník");
                     const orderNo = safeString(order.orderNumber || order.number, `#${order.id}`);
 
@@ -191,6 +201,17 @@ export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersVi
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={sorted.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </div>
 
         {/* Robust Order Detail Modal */}

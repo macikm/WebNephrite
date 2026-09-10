@@ -78,9 +78,9 @@ export default function HomePage() {
       if (tab === "dashboard" || force) {
         // Load dashboard essentials
         const [issued, received, prods] = await Promise.all([
-          fetchModule("v1/invoices/invoicesIssued", "invoicesIssued"),
-          fetchModule("v1/invoices/invoicesReceived", "invoicesReceived"),
-          fetchModule("v1/eshop/products", "products"),
+          fetchModule("v1/invoices/invoicesIssued?Top=250", "invoicesIssued"),
+          fetchModule("v1/invoices/invoicesReceived?Top=250", "invoicesReceived"),
+          fetchModule("v1/eshop/products?Top=250", "products"),
         ]);
         setInvoicesIssued(issued as Invoice[]);
         setInvoicesReceived(received as Invoice[]);
@@ -88,42 +88,68 @@ export default function HomePage() {
         setLoadedTabs(prev => ({ ...prev, dashboard: true, invoices_issued: true, invoices_received: true, products: true }));
       } else if (tab === "invoices_issued" || tab === "invoices_received") {
         const [issued, received] = await Promise.all([
-          fetchModule("v1/invoices/invoicesIssued", "invoicesIssued"),
-          fetchModule("v1/invoices/invoicesReceived", "invoicesReceived"),
+          fetchModule("v1/invoices/invoicesIssued?Top=250", "invoicesIssued"),
+          fetchModule("v1/invoices/invoicesReceived?Top=250", "invoicesReceived"),
         ]);
         setInvoicesIssued(issued as Invoice[]);
         setInvoicesReceived(received as Invoice[]);
         setLoadedTabs(prev => ({ ...prev, invoices_issued: true, invoices_received: true }));
       } else if (tab === "products") {
-        const prods = await fetchModule("v1/eshop/products", "products");
+        const prods = await fetchModule("v1/eshop/products?Top=250", "products");
         setProducts(prods as Product[]);
         setLoadedTabs(prev => ({ ...prev, products: true }));
       } else if (tab === "orders") {
         const [rec, iss] = await Promise.all([
-          fetchModule("v1/warehouse/ordersReceived", "ordersReceived"),
-          fetchModule("v1/warehouse/ordersIssued", "ordersIssued"),
+          fetchModule("v1/warehouse/ordersReceived?Top=250", "ordersReceived"),
+          fetchModule("v1/warehouse/ordersIssued?Top=250", "ordersIssued"),
         ]);
         setOrdersReceived(rec as Order[]);
         setOrdersIssued(iss as Order[]);
         setLoadedTabs(prev => ({ ...prev, orders: true }));
       } else if (tab === "customers") {
-        const [cust, cont] = await Promise.all([
-          fetchModule("v1/eshop/customers", "customers"),
-          fetchModule("v1/general/contacts", "contacts"),
+        // Load companies from core Organizations (Generic browse 12) + contacts
+        const [orgs, cont] = await Promise.all([
+          fetchModule("v1/Generic/browse/12?Top=250", "data"),
+          fetchModule("v1/general/contacts?Top=250", "contacts"),
         ]);
-        setCustomers(cust as Customer[]);
+
+        let loadedCustomers: Customer[] = [];
+        if (orgs && orgs.length > 0) {
+          loadedCustomers = (orgs as Array<Record<string, unknown>>).map((o) => ({
+            id: Number(o.organizace_cislo_subjektu || o.id || 0),
+            number: String(o.organizace_reference_subjektu || o.number || o.organizace_cislo_subjektu || ""),
+            name: String(o.organizace_nazev_subjektu || o.name || "Neznámá společnost"),
+            tin: o.organizace_ico ? String(o.organizace_ico) : undefined,
+            vatId: o.organizace_dic ? String(o.organizace_dic) : undefined,
+            street: o.organizace_ulice ? String(o.organizace_ulice) : undefined,
+            city: o.organizace_misto ? String(o.organizace_misto) : undefined,
+            zipCode: o.organizace_psc ? String(o.organizace_psc) : undefined,
+            country: o.zeme_iso_kod_zeme ? String(o.zeme_iso_kod_zeme) : "CZ",
+            turnoverFV: typeof o.FV === "number" ? o.FV : undefined,
+            turnoverFD: typeof o.FD === "number" ? o.FD : undefined,
+          }));
+        } else {
+          // Fallback to eshop customers
+          const fallback = await fetchModule("v1/eshop/customers?Top=250", "customers");
+          loadedCustomers = fallback as Customer[];
+        }
+
+        setCustomers(loadedCustomers);
         setContacts(cont as ContactPerson[]);
         setLoadedTabs(prev => ({ ...prev, customers: true }));
       } else if (tab === "jobs") {
         const [jobs, jTasks] = await Promise.all([
-          fetchModule("v1/jobOrder/jobOrders", "jobOrders"),
-          fetchModule("v1/jobOrder/tasks", "tasks"),
+          fetchModule("v1/jobOrder/jobOrders?Top=250", "jobOrders"),
+          fetchModule("v1/jobOrder/tasks?Top=250", "tasks"),
         ]);
         setJobOrders(jobs as JobOrder[]);
         setTasks(jTasks as JobTask[]);
         setLoadedTabs(prev => ({ ...prev, jobs: true }));
       } else if (tab === "documents") {
-        const docs = await fetchModule("v1/Documents/DMSDocuments", "documents");
+        let docs = await fetchModule("v1/Documents/DMSDocuments?Top=100", "documents");
+        if (!docs || docs.length === 0) {
+          docs = await fetchModule("v1/Documents/ExternalDocuments?Top=100", "documents");
+        }
         setDocuments(docs as DocumentItem[]);
         setLoadedTabs(prev => ({ ...prev, documents: true }));
       }

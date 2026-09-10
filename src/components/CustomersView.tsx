@@ -15,11 +15,13 @@ import {
   Eye
 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
+import { Pagination } from "./Pagination";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { 
   SortDirection, 
   sortData, 
-  safeString 
+  safeString,
+  safeCurrency 
 } from "@/lib/table-utils";
 
 interface CustomersViewProps {
@@ -37,6 +39,10 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
   // Sorting
   const [sortKey, setSortKey] = useState<string | null>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -73,6 +79,11 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
   const sortedCustomers = sortData(filteredCustomers, sortKey, sortDirection);
   const sortedContacts = sortData(filteredContacts, sortKey, sortDirection);
 
+  const paginatedCustomers = sortedCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedContacts = sortedContacts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const currentTotal = activeTab === "companies" ? sortedCustomers.length : sortedContacts.length;
+
   return (
     <ErrorBoundary fallbackTitle="Chyba při zobrazení adresáře CRM">
       <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -82,7 +93,7 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
             {/* Subtabs toggle */}
             <div style={{ display: "flex", gap: "0.5rem", background: "rgba(10, 15, 25, 0.7)", padding: "0.25rem", borderRadius: "var(--radius-md)" }}>
               <button
-                onClick={() => { setActiveTab("companies"); setSortKey("name"); }}
+                onClick={() => { setActiveTab("companies"); setSortKey("name"); setCurrentPage(1); }}
                 className={`btn ${activeTab === "companies" ? "btn-primary" : "btn-secondary"}`}
                 style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
               >
@@ -90,7 +101,7 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
                 <span>Firmy & Partneři ({customers.length})</span>
               </button>
               <button
-                onClick={() => { setActiveTab("contacts"); setSortKey("name"); }}
+                onClick={() => { setActiveTab("contacts"); setSortKey("name"); setCurrentPage(1); }}
                 className={`btn ${activeTab === "contacts" ? "btn-primary" : "btn-secondary"}`}
                 style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
               >
@@ -195,7 +206,7 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
                       </td>
                     </tr>
                   ) : (
-                    sortedCustomers.map((c) => (
+                    paginatedCustomers.map((c) => (
                       <tr key={c.id}>
                         {/* Detail in 1st column */}
                         <td style={{ textAlign: "center" }}>
@@ -297,7 +308,7 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
                       </td>
                     </tr>
                   ) : (
-                    sortedContacts.map((cp) => {
+                    paginatedContacts.map((cp) => {
                       const initial = cp.firstName ? cp.firstName[0] : (cp.name ? cp.name[0] : "K");
                       const phoneStr = safeString(cp.mobilePhone || cp.phone, "");
                       const emailStr = safeString(cp.email, "");
@@ -400,6 +411,15 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
               </table>
             )}
           </div>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalItems={currentTotal}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
 
         {/* Robust Contact Person Detail Modal */}

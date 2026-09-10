@@ -14,6 +14,7 @@ import {
   Eye
 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
+import { Pagination } from "./Pagination";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { 
   SortDirection, 
@@ -47,6 +48,10 @@ export function InvoicesView({
   const [sortKey, setSortKey] = useState<string | null>("issueDate");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const currentList = activeType === "issued" ? invoicesIssued : invoicesReceived;
 
   const handleSort = (key: string) => {
@@ -78,6 +83,12 @@ export function InvoicesView({
 
   // Sort
   const sortedInvoices = sortData(filteredInvoices, sortKey, sortDirection);
+
+  // Pagination slice
+  const paginatedInvoices = sortedInvoices.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const totalAmount = filteredInvoices.reduce((sum, i) => sum + safeNumber(i.totalAmount, 0), 0);
   const totalOutstanding = filteredInvoices.reduce((sum, i) => sum + safeNumber(i.outstandingAmount, 0), 0);
@@ -257,7 +268,7 @@ export function InvoicesView({
                     </td>
                   </tr>
                 ) : (
-                  sortedInvoices.map((inv) => {
+                  paginatedInvoices.map((inv) => {
                     const isPaid = inv.invPaymentStatusCode === "paid";
                     const docNum = safeString(inv.invoiceNo || inv.number, `#${inv.id}`);
                     const vs = safeString(inv.variableSymbol, "—");
@@ -319,6 +330,17 @@ export function InvoicesView({
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={sortedInvoices.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </div>
 
         {/* Robust Detail Modal */}
