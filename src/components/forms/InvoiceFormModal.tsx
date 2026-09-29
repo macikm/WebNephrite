@@ -46,57 +46,46 @@ export function InvoiceFormModal({
 
   // Form State
   const [docType, setDocType] = useState<"issued" | "received">(
-    initialInvoice ? (defaultType) : defaultType
+    activeInitial ? defaultType : defaultType
   );
   const [invoiceNo, setInvoiceNo] = useState(
-    initialInvoice?.invoiceNo || initialInvoice?.number || `FV${new Date().getFullYear()}${String(Math.floor(Math.random() * 900) + 100)}`
+    activeInitial?.invoiceNo || activeInitial?.number || `FV${new Date().getFullYear()}${String(Math.floor(Math.random() * 900) + 100)}`
   );
   const [variableSymbol, setVariableSymbol] = useState(
-    initialInvoice?.variableSymbol || invoiceNo.replace(/\D/g, "") || String(Date.now()).slice(-8)
+    activeInitial?.variableSymbol || invoiceNo.replace(/\D/g, "") || String(Date.now()).slice(-8)
   );
-  const [constantSymbol, setConstantSymbol] = useState(initialInvoice?.constantSymbol || "0308");
+  const [constantSymbol, setConstantSymbol] = useState(activeInitial?.constantSymbol || "0308");
   
   // Customer
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | "">(
-    initialInvoice?.customer?.id || ""
+    activeInitial?.customer?.id || ""
   );
   const [customCustomerName, setCustomCustomerName] = useState(
-    initialInvoice?.customer?.name || ""
+    activeInitial?.customer?.name || ""
   );
-  const [customerTin, setCustomerTin] = useState(initialInvoice?.tin || "");
+  const [customerTin, setCustomerTin] = useState(activeInitial?.tin || "");
 
   // Dates
   const todayStr = new Date().toISOString().split("T")[0];
   const in14Days = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const [issueDate, setIssueDate] = useState(
-    initialInvoice?.issueDate ? initialInvoice.issueDate.split("T")[0] : todayStr
+    activeInitial?.issueDate ? activeInitial.issueDate.split("T")[0] : todayStr
   );
   const [dueDate, setDueDate] = useState(
-    initialInvoice?.dueDate ? initialInvoice.dueDate.split("T")[0] : in14Days
+    activeInitial?.dueDate ? activeInitial.dueDate.split("T")[0] : in14Days
   );
   const [vatDate, setVatDate] = useState(
-    initialInvoice?.vatDate ? initialInvoice.vatDate.split("T")[0] : todayStr
+    activeInitial?.vatDate ? activeInitial.vatDate.split("T")[0] : todayStr
   );
 
   // Payment & Currency
-  const [paymentType, setPaymentType] = useState(initialInvoice?.paymentType || "Převodem");
-  const [currencyCode, setCurrencyCode] = useState(initialInvoice?.currencyCode || "CZK");
-  const [note, setNote] = useState(initialInvoice?.note || "");
+  const [paymentType, setPaymentType] = useState(activeInitial?.paymentType || "Převodem");
+  const [currencyCode, setCurrencyCode] = useState(activeInitial?.currencyCode || "CZK");
+  const [note, setNote] = useState(activeInitial?.note || "");
 
-  // Line items
+  // Line items (empty by default for new invoice, or populated when editing)
   const [items, setItems] = useState<InvoiceItem[]>(
-    initialInvoice?.items && initialInvoice.items.length > 0
-      ? initialInvoice.items
-      : [
-          {
-            id: 1,
-            name: "Konzultační a programátorské práce",
-            quantity: 1,
-            measureUnit: "hod",
-            unitPrice: 1850,
-            vatRate: 21,
-          },
-        ]
+    activeInitial?.items && activeInitial.items.length > 0 ? activeInitial.items : []
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -542,83 +531,105 @@ export function InvoiceFormModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {calculatedItems.map((item, idx) => (
-                    <tr key={item.id || idx}>
-                      <td>
-                        <input
-                          type="text"
-                          required
-                          className="input-control"
-                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
-                          value={item.name || ""}
-                          placeholder="Popis položky..."
-                          onChange={(e) => handleUpdateItem(idx, { name: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0.01"
-                          required
-                          className="input-control"
-                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right" }}
-                          value={item.quantity ?? 1}
-                          onChange={(e) => handleUpdateItem(idx, { quantity: parseFloat(e.target.value) || 0 })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          className="input-control"
-                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "center" }}
-                          value={item.measureUnit || "ks"}
-                          onChange={(e) => handleUpdateItem(idx, { measureUnit: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          step="any"
-                          required
-                          className="input-control"
-                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right", fontWeight: 600 }}
-                          value={item.unitPrice ?? 0}
-                          onChange={(e) => handleUpdateItem(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
-                        />
-                      </td>
-                      <td>
-                        <select
-                          className="input-control"
-                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
-                          value={item.vatRate ?? 21}
-                          onChange={(e) => handleUpdateItem(idx, { vatRate: parseInt(e.target.value, 10) })}
-                        >
-                          <option value={21}>21 %</option>
-                          <option value={12}>12 %</option>
-                          <option value={0}>0 % (Osvob.)</option>
-                        </select>
-                      </td>
-                      <td style={{ textAlign: "right", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                        {safeCurrency(item.base, currencyCode)}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <button
-                          type="button"
-                          disabled={items.length <= 1}
-                          onClick={() => handleRemoveItem(idx)}
-                          style={{
-                            color: items.length <= 1 ? "var(--text-dim)" : "var(--accent-rose)",
-                            opacity: items.length <= 1 ? 0.3 : 1,
-                            padding: "4px",
-                          }}
-                          title="Smazat položku"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                  {calculatedItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem 1.5rem", color: "var(--text-dim)" }}>
+                        <div style={{ marginBottom: "0.85rem", fontSize: "0.9rem", color: "var(--text-muted)" }}>
+                          Faktura zatím neobsahuje žádné položky.
+                        </div>
+                        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleAddItem()}
+                            className="btn btn-primary"
+                            style={{ padding: "0.45rem 1rem", fontSize: "0.85rem", gap: "0.35rem" }}
+                          >
+                            <Plus size={15} />
+                            <span>Přidat volnou položku</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    calculatedItems.map((item, idx) => (
+                      <tr key={item.id || idx}>
+                        <td>
+                          <input
+                            type="text"
+                            required
+                            className="input-control"
+                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                            value={item.name || ""}
+                            placeholder="Popis položky..."
+                            onChange={(e) => handleUpdateItem(idx, { name: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0.01"
+                            required
+                            className="input-control"
+                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right" }}
+                            value={item.quantity ?? 1}
+                            onChange={(e) => handleUpdateItem(idx, { quantity: parseFloat(e.target.value) || 0 })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            className="input-control"
+                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "center" }}
+                            value={item.measureUnit || "ks"}
+                            onChange={(e) => handleUpdateItem(idx, { measureUnit: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            step="any"
+                            required
+                            className="input-control"
+                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right", fontWeight: 600 }}
+                            value={item.unitPrice ?? 0}
+                            onChange={(e) => handleUpdateItem(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
+                          />
+                        </td>
+                        <td>
+                          <select
+                            className="input-control"
+                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                            value={item.vatRate ?? 21}
+                            onChange={(e) => handleUpdateItem(idx, { vatRate: parseInt(e.target.value, 10) })}
+                          >
+                            <option value={21}>21 %</option>
+                            <option value={12}>12 %</option>
+                            <option value={0}>0 % (Osvob.)</option>
+                          </select>
+                        </td>
+                        <td style={{ textAlign: "right", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                          {safeCurrency(item.base, currencyCode)}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(idx)}
+                            style={{
+                              color: "var(--accent-rose)",
+                              padding: "4px",
+                              cursor: "pointer",
+                              background: "transparent",
+                              border: "none",
+                            }}
+                            title="Smazat položku"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

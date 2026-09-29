@@ -68,17 +68,7 @@ export function OrderFormModal({
 
   // Order Items
   const [items, setItems] = useState<OrderItem[]>(
-    initialOrder?.items && initialOrder.items.length > 0
-      ? initialOrder.items
-      : [
-          {
-            id: 1,
-            name: "Položka objednávky",
-            quantity: 1,
-            measureUnit: "ks",
-            unitPrice: 1250,
-          },
-        ]
+    initialOrder?.items && initialOrder.items.length > 0 ? initialOrder.items : []
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -442,70 +432,93 @@ export function OrderFormModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {calculatedItems.map((item, idx) => (
-                    <tr key={item.id || idx}>
-                      <td>
-                        <input
-                          type="text"
-                          required
-                          className="input-control"
-                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
-                          value={item.name || ""}
-                          placeholder="Položka..."
-                          onChange={(e) => handleUpdateItem(idx, { name: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0.01"
-                          required
-                          className="input-control"
-                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right" }}
-                          value={item.quantity ?? 1}
-                          onChange={(e) => handleUpdateItem(idx, { quantity: parseFloat(e.target.value) || 0 })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          className="input-control"
-                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "center" }}
-                          value={item.measureUnit || "ks"}
-                          onChange={(e) => handleUpdateItem(idx, { measureUnit: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          step="any"
-                          required
-                          className="input-control"
-                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right" }}
-                          value={item.unitPrice ?? 0}
-                          onChange={(e) => handleUpdateItem(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
-                        />
-                      </td>
-                      <td style={{ textAlign: "right", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                        {safeCurrency(item.totalPrice, currency)}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <button
-                          type="button"
-                          disabled={items.length <= 1}
-                          onClick={() => handleRemoveItem(idx)}
-                          style={{
-                            color: items.length <= 1 ? "var(--text-dim)" : "var(--accent-rose)",
-                            opacity: items.length <= 1 ? 0.3 : 1,
-                            padding: "4px",
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                  {calculatedItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem 1.5rem", color: "var(--text-dim)" }}>
+                        <div style={{ marginBottom: "0.85rem", fontSize: "0.9rem", color: "var(--text-muted)" }}>
+                          Objednávka zatím neobsahuje žádné položky.
+                        </div>
+                        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleAddItem()}
+                            className="btn btn-primary"
+                            style={{ padding: "0.45rem 1rem", fontSize: "0.85rem", gap: "0.35rem" }}
+                          >
+                            <Plus size={15} />
+                            <span>Přidat volnou položku</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    calculatedItems.map((item, idx) => (
+                      <tr key={item.id || idx}>
+                        <td>
+                          <input
+                            type="text"
+                            required
+                            className="input-control"
+                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                            value={item.name || ""}
+                            placeholder="Položka..."
+                            onChange={(e) => handleUpdateItem(idx, { name: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0.01"
+                            required
+                            className="input-control"
+                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right" }}
+                            value={item.quantity ?? 1}
+                            onChange={(e) => handleUpdateItem(idx, { quantity: parseFloat(e.target.value) || 0 })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            className="input-control"
+                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "center" }}
+                            value={item.measureUnit || "ks"}
+                            onChange={(e) => handleUpdateItem(idx, { measureUnit: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            step="any"
+                            required
+                            className="input-control"
+                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right" }}
+                            value={item.unitPrice ?? 0}
+                            onChange={(e) => handleUpdateItem(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
+                          />
+                        </td>
+                        <td style={{ textAlign: "right", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                          {safeCurrency(item.totalPrice, currency)}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(idx)}
+                            style={{
+                              color: "var(--accent-rose)",
+                              padding: "4px",
+                              cursor: "pointer",
+                              background: "transparent",
+                              border: "none",
+                            }}
+                            title="Smazat položku"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
