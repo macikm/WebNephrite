@@ -11,22 +11,30 @@ import {
   X, 
   File, 
   Calendar, 
-  HardDrive 
+  HardDrive,
+  Plus,
+  Edit3
 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
 import { Pagination } from "./Pagination";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { DocumentFormModal } from "./forms/DocumentFormModal";
 import { SortDirection, sortData, safeString, safeDate } from "@/lib/table-utils";
 
 interface DocumentsViewProps {
   documents: DocumentItem[];
   isLoading: boolean;
+  onSaveDocument?: (doc: DocumentItem) => void;
 }
 
-export function DocumentsView({ documents, isLoading }: DocumentsViewProps) {
+export function DocumentsView({ documents, isLoading, onSaveDocument }: DocumentsViewProps) {
   const [search, setSearch] = useState("");
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+
+  // Form modal states
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
 
   // Sorting & Pagination
   const [sortKey, setSortKey] = useState<string | null>("createdOn");
@@ -137,19 +145,33 @@ export function DocumentsView({ documents, isLoading }: DocumentsViewProps) {
               </p>
             </div>
 
-            <div style={{ position: "relative", flex: "1 1 300px", maxWidth: "450px" }}>
-              <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
-              <input
-                type="text"
-                className="input-control"
-                style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
-                placeholder="Hledat dokument podle názvu nebo souboru..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setCurrentPage(1);
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flex: "1 1 400px", justifyContent: "flex-end" }}>
+              <div style={{ position: "relative", flex: "1 1 260px", maxWidth: "400px" }}>
+                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+                <input
+                  type="text"
+                  className="input-control"
+                  style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
+                  placeholder="Hledat dokument podle názvu nebo souboru..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  setEditingDoc(null);
+                  setIsFormOpen(true);
                 }}
-              />
+                className="btn btn-primary"
+                style={{ padding: "0.5rem 1rem", fontSize: "0.85rem", gap: "0.4rem", whiteSpace: "nowrap" }}
+              >
+                <Plus size={16} />
+                <span>Nahrát dokument</span>
+              </button>
             </div>
           </div>
         </div>
@@ -160,7 +182,7 @@ export function DocumentsView({ documents, isLoading }: DocumentsViewProps) {
             <table className="erp-table">
               <thead>
                 <tr>
-                  <th style={{ width: "95px", textAlign: "center" }}>Prohlížeč</th>
+                  <th style={{ width: "140px", textAlign: "center" }}>Akce</th>
                   <SortableHeader
                     label="Číslo / Ref"
                     columnKey="reference"
@@ -196,7 +218,7 @@ export function DocumentsView({ documents, isLoading }: DocumentsViewProps) {
                     sortDirection={sortDirection}
                     onSort={handleSort}
                   />
-                  <th>Akce</th>
+                  <th>Soubor</th>
                 </tr>
               </thead>
               <tbody>
@@ -219,17 +241,31 @@ export function DocumentsView({ documents, isLoading }: DocumentsViewProps) {
 
                     return (
                       <tr key={d.id}>
-                        {/* Detail / View in 1st column */}
+                        {/* Detail / View and Edit in 1st column */}
                         <td style={{ textAlign: "center" }}>
-                          <button
-                            onClick={() => openDocument(d)}
-                            className="btn btn-primary"
-                            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", gap: "0.3rem" }}
-                            title="Otevřít v integrovaném prohlížeči dokumentů"
-                          >
-                            <Eye size={13} />
-                            <span>Zobrazit</span>
-                          </button>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}>
+                            <button
+                              onClick={() => openDocument(d)}
+                              className="btn btn-secondary"
+                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                              title="Otevřít v integrovaném prohlížeči dokumentů"
+                            >
+                              <Eye size={13} />
+                              <span>Zobrazit</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingDoc(d);
+                                setIsFormOpen(true);
+                              }}
+                              className="btn btn-primary"
+                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                              title="Upravit dokument"
+                            >
+                              <Edit3 size={13} />
+                              <span>Upravit</span>
+                            </button>
+                          </div>
                         </td>
                         <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>
                           {safeString(d.reference || d.documentNumber, `#${d.id}`)}
@@ -318,10 +354,23 @@ export function DocumentsView({ documents, isLoading }: DocumentsViewProps) {
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <button
+                    onClick={() => {
+                      const d = selectedDoc;
+                      setSelectedDoc(null);
+                      setEditingDoc(d);
+                      setIsFormOpen(true);
+                    }}
+                    className="btn btn-primary"
+                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                  >
+                    <Edit3 size={14} />
+                    <span>Upravit</span>
+                  </button>
                   {selectedDoc.fileContent && (
                     <button
                       onClick={() => handleDownload(selectedDoc)}
-                      className="btn btn-primary"
+                      className="btn btn-secondary"
                       style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}
                     >
                       <Download size={14} />
@@ -458,6 +507,23 @@ export function DocumentsView({ documents, isLoading }: DocumentsViewProps) {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Form Modal for Create / Edit */}
+        {isFormOpen && (
+          <DocumentFormModal
+            isOpen={isFormOpen}
+            onClose={() => {
+              setIsFormOpen(false);
+              setEditingDoc(null);
+            }}
+            initialData={editingDoc}
+            onSave={(saved) => {
+              if (onSaveDocument) onSaveDocument(saved);
+              setIsFormOpen(false);
+              setEditingDoc(null);
+            }}
+          />
         )}
       </div>
     </ErrorBoundary>

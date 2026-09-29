@@ -12,11 +12,15 @@ import {
   Briefcase, 
   X, 
   CheckCircle2,
-  Eye
+  Eye,
+  Plus,
+  Edit3
 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
 import { Pagination } from "./Pagination";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { CustomerFormModal } from "./forms/CustomerFormModal";
+import { ContactFormModal } from "./forms/ContactFormModal";
 import { 
   SortDirection, 
   sortData, 
@@ -28,13 +32,27 @@ interface CustomersViewProps {
   customers: Customer[];
   contacts: ContactPerson[];
   isLoading: boolean;
+  onSaveCustomer?: (customer: Customer) => void;
+  onSaveContact?: (contact: ContactPerson) => void;
 }
 
-export function CustomersView({ customers, contacts, isLoading }: CustomersViewProps) {
+export function CustomersView({ 
+  customers, 
+  contacts, 
+  isLoading,
+  onSaveCustomer,
+  onSaveContact
+}: CustomersViewProps) {
   const [activeTab, setActiveTab] = useState<"companies" | "contacts">("companies");
   const [search, setSearch] = useState("");
   const [selectedContact, setSelectedContact] = useState<ContactPerson | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  // Form modal states
+  const [isCustomerFormOpen, setIsCustomerFormOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<ContactPerson | null>(null);
 
   // Sorting
   const [sortKey, setSortKey] = useState<string | null>("name");
@@ -110,23 +128,51 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
               </button>
             </div>
 
-            {/* Search box */}
-            <div style={{ position: "relative", flex: "1 1 300px", maxWidth: "450px" }}>
-              <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
-              <input
-                type="text"
-                className="input-control"
-                style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
-                placeholder={activeTab === "companies" ? "Hledat podle názvu firmy, IČO nebo města..." : "Hledat podle jména, pozice, společnosti..."}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              {search && (
+            {/* Search box & Create Button */}
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flex: "1 1 400px", justifyContent: "flex-end" }}>
+              <div style={{ position: "relative", flex: "1 1 260px", maxWidth: "400px" }}>
+                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+                <input
+                  type="text"
+                  className="input-control"
+                  style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
+                  placeholder={activeTab === "companies" ? "Hledat podle názvu firmy, IČO nebo města..." : "Hledat podle jména, pozice, společnosti..."}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {activeTab === "companies" ? (
                 <button
-                  onClick={() => setSearch("")}
-                  style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}
+                  onClick={() => {
+                    setEditingCustomer(null);
+                    setIsCustomerFormOpen(true);
+                  }}
+                  className="btn btn-primary"
+                  style={{ padding: "0.5rem 1rem", fontSize: "0.85rem", gap: "0.4rem", whiteSpace: "nowrap" }}
                 >
-                  <X size={14} />
+                  <Plus size={16} />
+                  <span>Nový partner</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setEditingContact(null);
+                    setIsContactFormOpen(true);
+                  }}
+                  className="btn btn-primary"
+                  style={{ padding: "0.5rem 1rem", fontSize: "0.85rem", gap: "0.4rem", whiteSpace: "nowrap" }}
+                >
+                  <Plus size={16} />
+                  <span>Nová kontaktní osoba</span>
                 </button>
               )}
             </div>
@@ -153,7 +199,7 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
               <table className="erp-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "85px", textAlign: "center" }}>Detail</th>
+                    <th style={{ width: "135px", textAlign: "center" }}>Akce</th>
                     <SortableHeader
                       label="Číslo partnera"
                       columnKey="number"
@@ -208,17 +254,31 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
                   ) : (
                     paginatedCustomers.map((c) => (
                       <tr key={c.id}>
-                        {/* Detail in 1st column */}
+                        {/* Detail and Edit in 1st column */}
                         <td style={{ textAlign: "center" }}>
-                          <button
-                            onClick={() => setSelectedCustomer(c)}
-                            className="btn btn-primary"
-                            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", gap: "0.3rem" }}
-                            title="Zobrazit detail partnera"
-                          >
-                            <Eye size={13} />
-                            <span>Detail</span>
-                          </button>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}>
+                            <button
+                              onClick={() => setSelectedCustomer(c)}
+                              className="btn btn-secondary"
+                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                              title="Zobrazit detail partnera"
+                            >
+                              <Eye size={13} />
+                              <span>Detail</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingCustomer(c);
+                                setIsCustomerFormOpen(true);
+                              }}
+                              className="btn btn-primary"
+                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                              title="Upravit partnera"
+                            >
+                              <Edit3 size={13} />
+                              <span>Upravit</span>
+                            </button>
+                          </div>
                         </td>
                         <td style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>
                           {safeString(c.number || c.referenceId, `#${c.id}`)}
@@ -260,7 +320,7 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
               <table className="erp-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "85px", textAlign: "center" }}>Detail</th>
+                    <th style={{ width: "135px", textAlign: "center" }}>Akce</th>
                     <SortableHeader
                       label="Kód osoby"
                       columnKey="number"
@@ -315,17 +375,31 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
 
                       return (
                         <tr key={cp.id}>
-                          {/* Detail in 1st column */}
+                          {/* Detail and Edit in 1st column */}
                           <td style={{ textAlign: "center" }}>
-                            <button
-                              onClick={() => setSelectedContact(cp)}
-                              className="btn btn-primary"
-                              style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", gap: "0.3rem" }}
-                              title="Zobrazit detail kontaktu"
-                            >
-                              <Eye size={13} />
-                              <span>Detail</span>
-                            </button>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}>
+                              <button
+                                onClick={() => setSelectedContact(cp)}
+                                className="btn btn-secondary"
+                                style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                                title="Zobrazit detail kontaktu"
+                              >
+                                <Eye size={13} />
+                                <span>Detail</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingContact(cp);
+                                  setIsContactFormOpen(true);
+                                }}
+                                className="btn btn-primary"
+                                style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                                title="Upravit kontaktní osobu"
+                              >
+                                <Edit3 size={13} />
+                                <span>Upravit</span>
+                              </button>
+                            </div>
                           </td>
                           <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>
                             {safeString(cp.number || cp.reference, `#${cp.id}`)}
@@ -456,22 +530,37 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedContact(null)}
-                  style={{
-                    width: "34px",
-                    height: "34px",
-                    borderRadius: "8px",
-                    background: "rgba(255,255,255,0.08)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--text-muted)",
-                  }}
-                  title="Zavřít"
-                >
-                  <X size={18} />
-                </button>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <button
+                    onClick={() => {
+                      const cp = selectedContact;
+                      setSelectedContact(null);
+                      setEditingContact(cp);
+                      setIsContactFormOpen(true);
+                    }}
+                    className="btn btn-primary"
+                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                  >
+                    <Edit3 size={14} />
+                    <span>Upravit</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedContact(null)}
+                    style={{
+                      width: "34px",
+                      height: "34px",
+                      borderRadius: "8px",
+                      background: "rgba(255,255,255,0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-muted)",
+                    }}
+                    title="Zavřít"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -577,22 +666,37 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedCustomer(null)}
-                  style={{
-                    width: "34px",
-                    height: "34px",
-                    borderRadius: "8px",
-                    background: "rgba(255,255,255,0.08)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--text-muted)",
-                  }}
-                  title="Zavřít"
-                >
-                  <X size={18} />
-                </button>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <button
+                    onClick={() => {
+                      const c = selectedCustomer;
+                      setSelectedCustomer(null);
+                      setEditingCustomer(c);
+                      setIsCustomerFormOpen(true);
+                    }}
+                    className="btn btn-primary"
+                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                  >
+                    <Edit3 size={14} />
+                    <span>Upravit</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedCustomer(null)}
+                    style={{
+                      width: "34px",
+                      height: "34px",
+                      borderRadius: "8px",
+                      background: "rgba(255,255,255,0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-muted)",
+                    }}
+                    title="Zavřít"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -659,6 +763,40 @@ export function CustomersView({ customers, contacts, isLoading }: CustomersViewP
               </div>
             </div>
           </div>
+        )}
+
+        {/* Form Modals */}
+        {isCustomerFormOpen && (
+          <CustomerFormModal
+            isOpen={isCustomerFormOpen}
+            onClose={() => {
+              setIsCustomerFormOpen(false);
+              setEditingCustomer(null);
+            }}
+            initialData={editingCustomer}
+            onSave={(saved) => {
+              if (onSaveCustomer) onSaveCustomer(saved);
+              setIsCustomerFormOpen(false);
+              setEditingCustomer(null);
+            }}
+          />
+        )}
+
+        {isContactFormOpen && (
+          <ContactFormModal
+            isOpen={isContactFormOpen}
+            onClose={() => {
+              setIsContactFormOpen(false);
+              setEditingContact(null);
+            }}
+            companies={customers}
+            initialData={editingContact}
+            onSave={(saved) => {
+              if (onSaveContact) onSaveContact(saved);
+              setIsContactFormOpen(false);
+              setEditingContact(null);
+            }}
+          />
         )}
       </div>
     </ErrorBoundary>

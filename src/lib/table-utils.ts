@@ -25,13 +25,17 @@ export function safeNumber(val: unknown, fallback = 0): number {
   return isNaN(num) ? fallback : num;
 }
 
-export function safeCurrency(val: unknown): string {
+export function safeCurrency(val: unknown, currency = "CZK"): string {
   const num = safeNumber(val, 0);
-  return new Intl.NumberFormat("cs-CZ", {
-    style: "currency",
-    currency: "CZK",
-    maximumFractionDigits: 2,
-  }).format(num);
+  try {
+    return new Intl.NumberFormat("cs-CZ", {
+      style: "currency",
+      currency: currency || "CZK",
+      maximumFractionDigits: 2,
+    }).format(num);
+  } catch {
+    return `${num.toLocaleString("cs-CZ")} ${currency || "CZK"}`;
+  }
 }
 
 export function safeDate(val: unknown, fallback = "—"): string {

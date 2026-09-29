@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Order } from "@/types/helios";
-import { Search, ShoppingCart, Clock, CheckCircle2, Eye, X, Building, Calendar } from "lucide-react";
+import { Order, Customer, Product } from "@/types/helios";
+import { Search, ShoppingCart, Clock, CheckCircle2, Eye, X, Building, Calendar, Plus, Edit3 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
 import { Pagination } from "./Pagination";
+import { OrderFormModal } from "./forms/OrderFormModal";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SortDirection, sortData, safeString, safeNumber, safeDate, safeCurrency } from "@/lib/table-utils";
 
@@ -12,12 +13,26 @@ interface OrdersViewProps {
   ordersReceived: Order[];
   ordersIssued: Order[];
   isLoading: boolean;
+  customers?: Customer[];
+  products?: Product[];
+  onSaveOrder?: (order: Order) => void;
 }
 
-export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersViewProps) {
+export function OrdersView({ 
+  ordersReceived, 
+  ordersIssued, 
+  isLoading,
+  customers = [],
+  products = [],
+  onSaveOrder,
+}: OrdersViewProps) {
   const [subType, setSubType] = useState<"received" | "issued">("received");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Form modal state
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   // Sorting
   const [sortKey, setSortKey] = useState<string | null>("orderDate");
@@ -76,16 +91,30 @@ export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersVi
               </button>
             </div>
 
-            <div style={{ position: "relative", flex: "1 1 300px", maxWidth: "450px" }}>
-              <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
-              <input
-                type="text"
-                className="input-control"
-                style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
-                placeholder="Hledat podle čísla objednávky nebo partnera..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: "1 1 300px", maxWidth: "600px" }}>
+              <div style={{ position: "relative", flex: 1 }}>
+                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+                <input
+                  type="text"
+                  className="input-control"
+                  style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
+                  placeholder="Hledat podle čísla objednávky nebo partnera..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  setEditingOrder(null);
+                  setIsFormOpen(true);
+                }}
+                className="btn btn-primary"
+                style={{ whiteSpace: "nowrap", padding: "0.55rem 1rem", fontSize: "0.85rem", gap: "0.4rem" }}
+              >
+                <Plus size={16} />
+                <span>{subType === "received" ? "Vytvořit objednávku" : "Vydat objednávku"}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -161,17 +190,31 @@ export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersVi
 
                     return (
                       <tr key={order.id}>
-                        {/* Detail in 1st column */}
+                        {/* Detail and Edit in 1st column */}
                         <td style={{ textAlign: "center" }}>
-                          <button
-                            onClick={() => setSelectedOrder(order)}
-                            className="btn btn-primary"
-                            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", gap: "0.3rem" }}
-                            title="Zobrazit detail objednávky"
-                          >
-                            <Eye size={13} />
-                            <span>Detail</span>
-                          </button>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}>
+                            <button
+                              onClick={() => setSelectedOrder(order)}
+                              className="btn btn-secondary"
+                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                              title="Zobrazit detail objednávky"
+                            >
+                              <Eye size={13} />
+                              <span>Detail</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingOrder(order);
+                                setIsFormOpen(true);
+                              }}
+                              className="btn btn-secondary"
+                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                              title="Upravit objednávku"
+                            >
+                              <Edit3 size={13} />
+                              <span>Upravit</span>
+                            </button>
+                          </div>
                         </td>
                         <td style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>
                           {orderNo}
@@ -247,22 +290,37 @@ export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersVi
                     </h2>
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  style={{
-                    width: "34px",
-                    height: "34px",
-                    borderRadius: "8px",
-                    background: "rgba(255,255,255,0.08)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--text-muted)",
-                  }}
-                  title="Zavřít"
-                >
-                  <X size={18} />
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <button
+                    onClick={() => {
+                      const ord = selectedOrder;
+                      setSelectedOrder(null);
+                      setEditingOrder(ord);
+                      setIsFormOpen(true);
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                  >
+                    <Edit3 size={14} />
+                    <span>Upravit objednávku</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedOrder(null)}
+                    style={{
+                      width: "34px",
+                      height: "34px",
+                      borderRadius: "8px",
+                      background: "rgba(255,255,255,0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-muted)",
+                    }}
+                    title="Zavřít"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -339,6 +397,20 @@ export function OrdersView({ ordersReceived, ordersIssued, isLoading }: OrdersVi
             </div>
           </div>
         )}
+
+        {/* Order Form Modal */}
+        <OrderFormModal
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSave={(saved) => {
+            onSaveOrder?.(saved);
+            setIsFormOpen(false);
+          }}
+          initialOrder={editingOrder}
+          defaultSubType={subType}
+          customers={customers}
+          products={products}
+        />
       </div>
     </ErrorBoundary>
   );

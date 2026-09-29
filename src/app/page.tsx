@@ -12,6 +12,7 @@ import { CustomersView } from "@/components/CustomersView";
 import { JobsView } from "@/components/JobsView";
 import { DocumentsView } from "@/components/DocumentsView";
 import { SettingsView } from "@/components/SettingsView";
+import { ToastContainer, ToastMessage } from "@/components/Toast";
 import { Invoice, Product, Order, Customer, ContactPerson, JobOrder, JobTask, DocumentItem, UserInfo } from "@/types/helios";
 
 // Helper to safely extract an array from Helios responses (handles both direct arrays and wrapped objects like { products: [...] })
@@ -57,6 +58,150 @@ export default function HomePage() {
   // Track loaded tabs to avoid duplicate fetching
   const [loadedTabs, setLoadedTabs] = useState<Record<string, boolean>>({});
 
+  // Toast notifications state
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const showToast = useCallback((type: "success" | "error" | "info" | "warning", text: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    setToasts(prev => [...prev, { id, type, text }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // Save handlers with optimistic/real-time state updates
+  const handleSaveInvoice = useCallback((saved: Invoice) => {
+    const isIssued = saved.invoiceNo?.startsWith("FV") || invoiceSubtype === "issued" || invoicesIssued.some(i => i.id === saved.id);
+    if (isIssued) {
+      setInvoicesIssued(prev => {
+        const index = prev.findIndex(i => i.id === saved.id);
+        if (index >= 0) {
+          const updated = [...prev];
+          updated[index] = saved;
+          return updated;
+        }
+        return [saved, ...prev];
+      });
+      showToast("success", `Faktura vydaná #${saved.invoiceNo || saved.id} byla úspěšně uložena.`);
+    } else {
+      setInvoicesReceived(prev => {
+        const index = prev.findIndex(i => i.id === saved.id);
+        if (index >= 0) {
+          const updated = [...prev];
+          updated[index] = saved;
+          return updated;
+        }
+        return [saved, ...prev];
+      });
+      showToast("success", `Faktura přijatá #${saved.invoiceNo || saved.id} byla úspěšně uložena.`);
+    }
+  }, [invoiceSubtype, invoicesIssued, showToast]);
+
+  const handleSaveOrder = useCallback((saved: Order) => {
+    const isRec = ordersReceived.some(o => o.id === saved.id) || !ordersIssued.some(o => o.id === saved.id);
+    if (isRec) {
+      setOrdersReceived(prev => {
+        const idx = prev.findIndex(o => o.id === saved.id);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = saved;
+          return updated;
+        }
+        return [saved, ...prev];
+      });
+    } else {
+      setOrdersIssued(prev => {
+        const idx = prev.findIndex(o => o.id === saved.id);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = saved;
+          return updated;
+        }
+        return [saved, ...prev];
+      });
+    }
+    showToast("success", `Objednávka #${saved.orderNumber || saved.id} byla úspěšně uložena.`);
+  }, [ordersReceived, ordersIssued, showToast]);
+
+  const handleSaveProduct = useCallback((saved: Product) => {
+    setProducts(prev => {
+      const idx = prev.findIndex(p => p.id === saved.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = saved;
+        return updated;
+      }
+      return [saved, ...prev];
+    });
+    showToast("success", `Produkt "${saved.name}" byl úspěšně uložen do skladu.`);
+  }, [showToast]);
+
+  const handleSaveCustomer = useCallback((saved: Customer) => {
+    setCustomers(prev => {
+      const idx = prev.findIndex(c => c.id === saved.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = saved;
+        return updated;
+      }
+      return [saved, ...prev];
+    });
+    showToast("success", `Partner "${saved.name}" byl úspěšně uložen do adresáře.`);
+  }, [showToast]);
+
+  const handleSaveContact = useCallback((saved: ContactPerson) => {
+    setContacts(prev => {
+      const idx = prev.findIndex(c => c.id === saved.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = saved;
+        return updated;
+      }
+      return [saved, ...prev];
+    });
+    showToast("success", `Kontaktní osoba "${saved.name || `${saved.firstName || ""} ${saved.lastName || ""}`}" byla úspěšně uložena.`);
+  }, [showToast]);
+
+  const handleSaveJob = useCallback((saved: JobOrder) => {
+    setJobOrders(prev => {
+      const idx = prev.findIndex(j => j.id === saved.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = saved;
+        return updated;
+      }
+      return [saved, ...prev];
+    });
+    showToast("success", `Zakázka #${saved.number || saved.id} byla úspěšně uložena.`);
+  }, [showToast]);
+
+  const handleSaveTask = useCallback((saved: JobTask) => {
+    setTasks(prev => {
+      const idx = prev.findIndex(t => t.id === saved.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = saved;
+        return updated;
+      }
+      return [saved, ...prev];
+    });
+    showToast("success", `Úkol "${saved.name}" byl úspěšně uložen.`);
+  }, [showToast]);
+
+  const handleSaveDocument = useCallback((saved: DocumentItem) => {
+    setDocuments(prev => {
+      const idx = prev.findIndex(d => d.id === saved.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = saved;
+        return updated;
+      }
+      return [saved, ...prev];
+    });
+    showToast("success", `Dokument "${saved.name}" byl úspěšně zaevidován do DMS.`);
+  }, [showToast]);
+
   // Helper fetcher
   const fetchModule = async (endpoint: string, key: string) => {
     try {
@@ -71,12 +216,43 @@ export default function HomePage() {
     return [];
   };
 
+  // Helper to load customers
+  const loadCustomersData = async () => {
+    const [orgs, cont] = await Promise.all([
+      fetchModule("v1/Generic/browse/12?Top=250", "data"),
+      fetchModule("v1/general/contacts?Top=250", "contacts"),
+    ]);
+
+    let loadedCustomers: Customer[] = [];
+    if (orgs && orgs.length > 0) {
+      loadedCustomers = (orgs as Array<Record<string, unknown>>).map((o) => ({
+        id: Number(o.organizace_cislo_subjektu || o.id || 0),
+        number: String(o.organizace_reference_subjektu || o.number || o.organizace_cislo_subjektu || ""),
+        name: String(o.organizace_nazev_subjektu || o.name || "Neznámá společnost"),
+        tin: o.organizace_ico ? String(o.organizace_ico) : undefined,
+        vatId: o.organizace_dic ? String(o.organizace_dic) : undefined,
+        street: o.organizace_ulice ? String(o.organizace_ulice) : undefined,
+        city: o.organizace_misto ? String(o.organizace_misto) : undefined,
+        zipCode: o.organizace_psc ? String(o.organizace_psc) : undefined,
+        country: o.zeme_iso_kod_zeme ? String(o.zeme_iso_kod_zeme) : "CZ",
+        turnoverFV: typeof o.FV === "number" ? o.FV : undefined,
+        turnoverFD: typeof o.FD === "number" ? o.FD : undefined,
+      }));
+    } else {
+      const fallback = await fetchModule("v1/eshop/customers?Top=250", "customers");
+      loadedCustomers = fallback as Customer[];
+    }
+    setCustomers(loadedCustomers);
+    setContacts(cont as ContactPerson[]);
+    setLoadedTabs(prev => ({ ...prev, customers: true }));
+  };
+
   // Load data for a specific tab or dashboard
   const loadDataForTab = useCallback(async (tab: TabId, force = false) => {
     setIsLoadingData(true);
     try {
       if (tab === "dashboard" || force) {
-        // Load dashboard essentials
+        // Load dashboard essentials + prefetch customers & products
         const [issued, received, prods] = await Promise.all([
           fetchModule("v1/invoices/invoicesIssued?Top=250", "invoicesIssued"),
           fetchModule("v1/invoices/invoicesReceived?Top=250", "invoicesReceived"),
@@ -86,6 +262,8 @@ export default function HomePage() {
         setInvoicesReceived(received as Invoice[]);
         setProducts(prods as Product[]);
         setLoadedTabs(prev => ({ ...prev, dashboard: true, invoices_issued: true, invoices_received: true, products: true }));
+        // Also prefetch customers in background for picker dropdowns
+        loadCustomersData();
       } else if (tab === "invoices_issued" || tab === "invoices_received") {
         const [issued, received] = await Promise.all([
           fetchModule("v1/invoices/invoicesIssued?Top=250", "invoicesIssued"),
@@ -94,6 +272,11 @@ export default function HomePage() {
         setInvoicesIssued(issued as Invoice[]);
         setInvoicesReceived(received as Invoice[]);
         setLoadedTabs(prev => ({ ...prev, invoices_issued: true, invoices_received: true }));
+        // Prefetch customers & products if not loaded yet
+        if (customers.length === 0) loadCustomersData();
+        if (products.length === 0) {
+          fetchModule("v1/eshop/products?Top=250", "products").then(p => setProducts(p as Product[]));
+        }
       } else if (tab === "products") {
         const prods = await fetchModule("v1/eshop/products?Top=250", "products");
         setProducts(prods as Product[]);
@@ -106,37 +289,12 @@ export default function HomePage() {
         setOrdersReceived(rec as Order[]);
         setOrdersIssued(iss as Order[]);
         setLoadedTabs(prev => ({ ...prev, orders: true }));
-      } else if (tab === "customers") {
-        // Load companies from core Organizations (Generic browse 12) + contacts
-        const [orgs, cont] = await Promise.all([
-          fetchModule("v1/Generic/browse/12?Top=250", "data"),
-          fetchModule("v1/general/contacts?Top=250", "contacts"),
-        ]);
-
-        let loadedCustomers: Customer[] = [];
-        if (orgs && orgs.length > 0) {
-          loadedCustomers = (orgs as Array<Record<string, unknown>>).map((o) => ({
-            id: Number(o.organizace_cislo_subjektu || o.id || 0),
-            number: String(o.organizace_reference_subjektu || o.number || o.organizace_cislo_subjektu || ""),
-            name: String(o.organizace_nazev_subjektu || o.name || "Neznámá společnost"),
-            tin: o.organizace_ico ? String(o.organizace_ico) : undefined,
-            vatId: o.organizace_dic ? String(o.organizace_dic) : undefined,
-            street: o.organizace_ulice ? String(o.organizace_ulice) : undefined,
-            city: o.organizace_misto ? String(o.organizace_misto) : undefined,
-            zipCode: o.organizace_psc ? String(o.organizace_psc) : undefined,
-            country: o.zeme_iso_kod_zeme ? String(o.zeme_iso_kod_zeme) : "CZ",
-            turnoverFV: typeof o.FV === "number" ? o.FV : undefined,
-            turnoverFD: typeof o.FD === "number" ? o.FD : undefined,
-          }));
-        } else {
-          // Fallback to eshop customers
-          const fallback = await fetchModule("v1/eshop/customers?Top=250", "customers");
-          loadedCustomers = fallback as Customer[];
+        if (customers.length === 0) loadCustomersData();
+        if (products.length === 0) {
+          fetchModule("v1/eshop/products?Top=250", "products").then(p => setProducts(p as Product[]));
         }
-
-        setCustomers(loadedCustomers);
-        setContacts(cont as ContactPerson[]);
-        setLoadedTabs(prev => ({ ...prev, customers: true }));
+      } else if (tab === "customers") {
+        await loadCustomersData();
       } else if (tab === "jobs") {
         const [jobs, jTasks] = await Promise.all([
           fetchModule("v1/jobOrder/jobOrders?Top=250", "jobOrders"),
@@ -145,6 +303,7 @@ export default function HomePage() {
         setJobOrders(jobs as JobOrder[]);
         setTasks(jTasks as JobTask[]);
         setLoadedTabs(prev => ({ ...prev, jobs: true }));
+        if (customers.length === 0) loadCustomersData();
       } else if (tab === "documents") {
         let docs = await fetchModule("v1/Documents/DMSDocuments?Top=100", "documents");
         if (!docs || docs.length === 0) {
@@ -156,7 +315,7 @@ export default function HomePage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, []);
+  }, [customers.length, products.length]);
 
   // Check authentication on initial load
   useEffect(() => {
@@ -279,6 +438,9 @@ export default function HomePage() {
                 setCurrentTab(type === "issued" ? "invoices_issued" : "invoices_received");
               }}
               isLoading={isLoadingData}
+              customers={customers}
+              products={products}
+              onSaveInvoice={handleSaveInvoice}
             />
           )}
 
@@ -286,6 +448,7 @@ export default function HomePage() {
             <ProductsView
               products={products}
               isLoading={isLoadingData}
+              onSaveProduct={handleSaveProduct}
             />
           )}
 
@@ -294,6 +457,9 @@ export default function HomePage() {
               ordersReceived={ordersReceived}
               ordersIssued={ordersIssued}
               isLoading={isLoadingData}
+              customers={customers}
+              products={products}
+              onSaveOrder={handleSaveOrder}
             />
           )}
 
@@ -302,6 +468,8 @@ export default function HomePage() {
               customers={customers}
               contacts={contacts}
               isLoading={isLoadingData}
+              onSaveCustomer={handleSaveCustomer}
+              onSaveContact={handleSaveContact}
             />
           )}
 
@@ -310,6 +478,9 @@ export default function HomePage() {
               jobOrders={jobOrders}
               tasks={tasks}
               isLoading={isLoadingData}
+              customers={customers}
+              onSaveJob={handleSaveJob}
+              onSaveTask={handleSaveTask}
             />
           )}
 
@@ -317,6 +488,7 @@ export default function HomePage() {
             <DocumentsView
               documents={documents}
               isLoading={isLoadingData}
+              onSaveDocument={handleSaveDocument}
             />
           )}
 
@@ -325,6 +497,9 @@ export default function HomePage() {
           )}
         </main>
       </div>
+
+      {/* Global Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </div>
   );
 }

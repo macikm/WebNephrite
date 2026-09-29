@@ -8,10 +8,13 @@ import {
   X, 
   CheckCircle2, 
   Eye,
-  Package
+  Package,
+  Plus,
+  Edit3
 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
 import { Pagination } from "./Pagination";
+import { ProductFormModal } from "./forms/ProductFormModal";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { 
   SortDirection, 
@@ -23,11 +26,16 @@ import {
 interface ProductsViewProps {
   products: Product[];
   isLoading: boolean;
+  onSaveProduct?: (product: Product) => void;
 }
 
-export function ProductsView({ products, isLoading }: ProductsViewProps) {
+export function ProductsView({ products, isLoading, onSaveProduct }: ProductsViewProps) {
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Form modal state
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Sorting
   const [sortKey, setSortKey] = useState<string | null>("name");
@@ -82,24 +90,38 @@ export function ProductsView({ products, isLoading }: ProductsViewProps) {
               </p>
             </div>
 
-            <div style={{ position: "relative", flex: "1 1 300px", maxWidth: "450px" }}>
-              <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
-              <input
-                type="text"
-                className="input-control"
-                style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
-                placeholder="Hledat zboží podle názvu, kódu nebo EAN..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}
-                >
-                  <X size={14} />
-                </button>
-              )}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: "1 1 320px", maxWidth: "600px" }}>
+              <div style={{ position: "relative", flex: 1 }}>
+                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+                <input
+                  type="text"
+                  className="input-control"
+                  style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
+                  placeholder="Hledat zboží podle názvu, kódu nebo EAN..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => {
+                  setEditingProduct(null);
+                  setIsFormOpen(true);
+                }}
+                className="btn btn-primary"
+                style={{ whiteSpace: "nowrap", padding: "0.55rem 1rem", fontSize: "0.85rem", gap: "0.4rem" }}
+              >
+                <Plus size={16} />
+                <span>Nový produkt</span>
+              </button>
             </div>
           </div>
 
@@ -184,17 +206,31 @@ export function ProductsView({ products, isLoading }: ProductsViewProps) {
                 ) : (
                   paginatedProducts.map((prod) => (
                     <tr key={prod.id}>
-                      {/* Detail in 1st column */}
+                      {/* Detail and Edit in 1st column */}
                       <td style={{ textAlign: "center" }}>
-                        <button
-                          onClick={() => setSelectedProduct(prod)}
-                          className="btn btn-primary"
-                          style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", gap: "0.3rem" }}
-                          title="Zobrazit detail položky"
-                        >
-                          <Eye size={13} />
-                          <span>Detail</span>
-                        </button>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}>
+                          <button
+                            onClick={() => setSelectedProduct(prod)}
+                            className="btn btn-secondary"
+                            style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                            title="Zobrazit detail položky"
+                          >
+                            <Eye size={13} />
+                            <span>Detail</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingProduct(prod);
+                              setIsFormOpen(true);
+                            }}
+                            className="btn btn-secondary"
+                            style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                            title="Upravit produkt"
+                          >
+                            <Edit3 size={13} />
+                            <span>Upravit</span>
+                          </button>
+                        </div>
                       </td>
                       <td style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>
                         {safeString(prod.referenceId, `#${prod.id}`)}
@@ -277,22 +313,37 @@ export function ProductsView({ products, isLoading }: ProductsViewProps) {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedProduct(null)}
-                  style={{
-                    width: "34px",
-                    height: "34px",
-                    borderRadius: "8px",
-                    background: "rgba(255,255,255,0.08)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--text-muted)",
-                  }}
-                  title="Zavřít"
-                >
-                  <X size={18} />
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <button
+                    onClick={() => {
+                      const prod = selectedProduct;
+                      setSelectedProduct(null);
+                      setEditingProduct(prod);
+                      setIsFormOpen(true);
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                  >
+                    <Edit3 size={14} />
+                    <span>Upravit produkt</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedProduct(null)}
+                    style={{
+                      width: "34px",
+                      height: "34px",
+                      borderRadius: "8px",
+                      background: "rgba(255,255,255,0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-muted)",
+                    }}
+                    title="Zavřít"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -376,6 +427,17 @@ export function ProductsView({ products, isLoading }: ProductsViewProps) {
             </div>
           </div>
         )}
+
+        {/* Product Form Modal */}
+        <ProductFormModal
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSave={(saved) => {
+            onSaveProduct?.(saved);
+            setIsFormOpen(false);
+          }}
+          initialProduct={editingProduct}
+        />
       </div>
     </ErrorBoundary>
   );

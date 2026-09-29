@@ -11,11 +11,15 @@ import {
   Building, 
   CreditCard, 
   Calendar, 
-  Eye
+  Eye,
+  Plus,
+  Edit3
 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
 import { Pagination } from "./Pagination";
+import { InvoiceFormModal } from "./forms/InvoiceFormModal";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { Customer, Product } from "@/types/helios";
 import { 
   SortDirection, 
   sortData, 
@@ -31,6 +35,9 @@ interface InvoicesViewProps {
   activeType: "issued" | "received";
   onChangeType: (type: "issued" | "received") => void;
   isLoading: boolean;
+  customers?: Customer[];
+  products?: Product[];
+  onSaveInvoice?: (invoice: Invoice) => void;
 }
 
 export function InvoicesView({
@@ -39,10 +46,17 @@ export function InvoicesView({
   activeType,
   onChangeType,
   isLoading,
+  customers = [],
+  products = [],
+  onSaveInvoice,
 }: InvoicesViewProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "unpaid" | "paid">("all");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  // Form modal state
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
   // Sorting state
   const [sortKey, setSortKey] = useState<string | null>("issueDate");
@@ -158,6 +172,18 @@ export function InvoicesView({
                   <option value="paid">Uhrazené</option>
                 </select>
               </div>
+
+              <button
+                onClick={() => {
+                  setEditingInvoice(null);
+                  setIsFormOpen(true);
+                }}
+                className="btn btn-primary"
+                style={{ whiteSpace: "nowrap", padding: "0.55rem 1rem", fontSize: "0.85rem", gap: "0.4rem" }}
+              >
+                <Plus size={16} />
+                <span>{activeType === "issued" ? "Vystavit fakturu" : "Zadat fakturu"}</span>
+              </button>
             </div>
           </div>
 
@@ -278,17 +304,31 @@ export function InvoicesView({
 
                     return (
                       <tr key={inv.id}>
-                        {/* Detail in 1st column */}
+                        {/* Detail and Edit in 1st column */}
                         <td style={{ textAlign: "center" }}>
-                          <button
-                            onClick={() => setSelectedInvoice(inv)}
-                            className="btn btn-primary"
-                            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", gap: "0.3rem" }}
-                            title="Zobrazit detail faktury"
-                          >
-                            <Eye size={13} />
-                            <span>Detail</span>
-                          </button>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}>
+                            <button
+                              onClick={() => setSelectedInvoice(inv)}
+                              className="btn btn-secondary"
+                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                              title="Zobrazit detail faktury"
+                            >
+                              <Eye size={13} />
+                              <span>Detail</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingInvoice(inv);
+                                setIsFormOpen(true);
+                              }}
+                              className="btn btn-secondary"
+                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                              title="Upravit fakturu"
+                            >
+                              <Edit3 size={13} />
+                              <span>Upravit</span>
+                            </button>
+                          </div>
                         </td>
                         <td style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>
                           {docNum}
@@ -362,22 +402,37 @@ export function InvoicesView({
                     {safeString(selectedInvoice.invoiceNo || selectedInvoice.number, `#${selectedInvoice.id}`)}
                   </h2>
                 </div>
-                <button
-                  onClick={() => setSelectedInvoice(null)}
-                  style={{
-                    width: "34px",
-                    height: "34px",
-                    borderRadius: "8px",
-                    background: "rgba(255,255,255,0.08)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--text-muted)",
-                  }}
-                  title="Zavřít detail"
-                >
-                  <X size={18} />
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <button
+                    onClick={() => {
+                      const inv = selectedInvoice;
+                      setSelectedInvoice(null);
+                      setEditingInvoice(inv);
+                      setIsFormOpen(true);
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                  >
+                    <Edit3 size={14} />
+                    <span>Upravit fakturu</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedInvoice(null)}
+                    style={{
+                      width: "34px",
+                      height: "34px",
+                      borderRadius: "8px",
+                      background: "rgba(255,255,255,0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-muted)",
+                    }}
+                    title="Zavřít detail"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* Content Details */}
@@ -548,6 +603,20 @@ export function InvoicesView({
             </div>
           </div>
         )}
+
+        {/* Invoice Creation & Editing Modal */}
+        <InvoiceFormModal
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSave={(saved) => {
+            onSaveInvoice?.(saved);
+            setIsFormOpen(false);
+          }}
+          initialInvoice={editingInvoice}
+          defaultType={activeType}
+          customers={customers}
+          products={products}
+        />
       </div>
     </ErrorBoundary>
   );

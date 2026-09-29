@@ -39,11 +39,14 @@ export interface InvoiceCustomer {
 export interface InvoiceItem {
   id?: number;
   itemId?: number;
+  productId?: number;
   name?: string;
   quantity?: number;
+  measureUnit?: string;
   unitPrice?: number;
-  totalPrice?: number;
   vatRate?: number;
+  vatAmount?: number;
+  totalPrice?: number;
 }
 
 export interface Invoice {
@@ -61,9 +64,14 @@ export interface Invoice {
   invPaymentStatusCode: 'paid' | 'unpaid' | 'partiallyPaid' | string;
   documentTypeCode?: 'realization' | 'creditNote' | 'proforma' | string;
   variableSymbol?: string;
+  constantSymbol?: string;
+  specificSymbol?: string;
+  currencyCode?: string;
+  paymentType?: string;
   tin?: string;
   note?: string;
   customer?: InvoiceCustomer;
+  items?: InvoiceItem[];
   jobOrder?: {
     id?: number;
     number?: string;
@@ -90,11 +98,23 @@ export interface Product {
   barcode?: string;
   measureUnit?: string;
   vatRate?: number;
+  price?: number;
+  unitPrice?: number;
   statusCode?: string;
   vendorName?: string;
   manufacturerName?: string;
   createdOn?: string;
   modifiedOn?: string;
+}
+
+export interface OrderItem {
+  id?: number;
+  productId?: number;
+  name?: string;
+  quantity?: number;
+  measureUnit?: string;
+  unitPrice?: number;
+  totalPrice?: number;
 }
 
 export interface Order {
@@ -113,6 +133,9 @@ export interface Order {
   totalAmount?: number;
   currency?: string;
   note?: string;
+  paymentType?: string;
+  transportType?: string;
+  items?: OrderItem[];
 }
 
 export interface Customer {
@@ -167,6 +190,7 @@ export interface JobOrder {
   };
   startDate?: string;
   endDate?: string;
+  budget?: number;
   note?: string;
 }
 
@@ -179,6 +203,8 @@ export interface JobTask {
   plannedHours?: number;
   spentHours?: number;
   assignedTo?: string;
+  dueDate?: string;
+  description?: string;
 }
 
 export interface DocumentItem {
@@ -186,6 +212,7 @@ export interface DocumentItem {
   name: string;
   documentNumber?: string;
   reference?: string;
+  category?: string;
   createdOn?: string;
   description?: string;
   fileName?: string;
