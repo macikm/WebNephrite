@@ -72,7 +72,9 @@ export default function HomePage() {
 
   // Save handlers with optimistic/real-time state updates
   const handleSaveInvoice = useCallback((saved: Invoice) => {
-    const isIssued = saved.invoiceNo?.startsWith("FV") || invoiceSubtype === "issued" || invoicesIssued.some(i => i.id === saved.id);
+    const isIssued = saved.documentTypeCode === "issued" || 
+      (!saved.documentTypeCode && (saved.invoiceNo?.startsWith("FV") || invoiceSubtype === "issued"));
+
     if (isIssued) {
       setInvoicesIssued(prev => {
         const index = prev.findIndex(i => i.id === saved.id);
@@ -96,7 +98,7 @@ export default function HomePage() {
       });
       showToast("success", `Faktura přijatá #${saved.invoiceNo || saved.id} byla úspěšně uložena.`);
     }
-  }, [invoiceSubtype, invoicesIssued, showToast]);
+  }, [invoiceSubtype, showToast]);
 
   const handleSaveOrder = useCallback((saved: Order) => {
     const isRec = ordersReceived.some(o => o.id === saved.id) || !ordersIssued.some(o => o.id === saved.id);
@@ -202,18 +204,19 @@ export default function HomePage() {
     showToast("success", `Dokument "${saved.name}" byl úspěšně zaevidován do DMS.`);
   }, [showToast]);
 
-  // Helper fetcher
-  const fetchModule = async (endpoint: string, key: string) => {
+  // Helper fetcher (returns null on error to avoid wiping existing data)
+  const fetchModule = async (endpoint: string, key: string): Promise<any[] | null> => {
     try {
       const res = await fetch(`/api/helios/${endpoint}`);
       if (res.ok) {
         const json = await res.json();
         return extractArray(json, key);
       }
+      console.warn(`API returned status ${res.status} for ${endpoint}`);
     } catch (err) {
       console.error(`Error loading ${endpoint}:`, err);
     }
-    return [];
+    return null;
   };
 
   // Helper to load customers
@@ -240,10 +243,10 @@ export default function HomePage() {
       }));
     } else {
       const fallback = await fetchModule("v1/eshop/customers?Top=250", "customers");
-      loadedCustomers = fallback as Customer[];
+      if (fallback !== null) loadedCustomers = fallback as Customer[];
     }
-    setCustomers(loadedCustomers);
-    setContacts(cont as ContactPerson[]);
+    if (loadedCustomers.length > 0) setCustomers(loadedCustomers);
+    if (cont !== null) setContacts(cont as ContactPerson[]);
     setLoadedTabs(prev => ({ ...prev, customers: true }));
   };
 
@@ -258,9 +261,9 @@ export default function HomePage() {
           fetchModule("v1/invoices/invoicesReceived?Top=250", "invoicesReceived"),
           fetchModule("v1/eshop/products?Top=250", "products"),
         ]);
-        setInvoicesIssued(issued as Invoice[]);
-        setInvoicesReceived(received as Invoice[]);
-        setProducts(prods as Product[]);
+        if (issued !== null) setInvoicesIssued(issued as Invoice[]);
+        if (received !== null) setInvoicesReceived(received as Invoice[]);
+        if (prods !== null) setProducts(prods as Product[]);
         setLoadedTabs(prev => ({ ...prev, dashboard: true, invoices_issued: true, invoices_received: true, products: true }));
         // Also prefetch customers in background for picker dropdowns
         loadCustomersData();
@@ -269,29 +272,33 @@ export default function HomePage() {
           fetchModule("v1/invoices/invoicesIssued?Top=250", "invoicesIssued"),
           fetchModule("v1/invoices/invoicesReceived?Top=250", "invoicesReceived"),
         ]);
-        setInvoicesIssued(issued as Invoice[]);
-        setInvoicesReceived(received as Invoice[]);
+        if (issued !== null) setInvoicesIssued(issued as Invoice[]);
+        if (received !== null) setInvoicesReceived(received as Invoice[]);
         setLoadedTabs(prev => ({ ...prev, invoices_issued: true, invoices_received: true }));
         // Prefetch customers & products if not loaded yet
         if (customers.length === 0) loadCustomersData();
         if (products.length === 0) {
-          fetchModule("v1/eshop/products?Top=250", "products").then(p => setProducts(p as Product[]));
+          fetchModule("v1/eshop/products?Top=250", "products").then(p => {
+            if (p !== null) setProducts(p as Product[]);
+          });
         }
       } else if (tab === "products") {
         const prods = await fetchModule("v1/eshop/products?Top=250", "products");
-        setProducts(prods as Product[]);
+        if (prods !== null) setProducts(prods as Product[]);
         setLoadedTabs(prev => ({ ...prev, products: true }));
       } else if (tab === "orders") {
         const [rec, iss] = await Promise.all([
           fetchModule("v1/warehouse/ordersReceived?Top=250", "ordersReceived"),
           fetchModule("v1/warehouse/ordersIssued?Top=250", "ordersIssued"),
         ]);
-        setOrdersReceived(rec as Order[]);
-        setOrdersIssued(iss as Order[]);
+        if (rec !== null) setOrdersReceived(rec as Order[]);
+        if (iss !== null) setOrdersIssued(iss as Order[]);
         setLoadedTabs(prev => ({ ...prev, orders: true }));
         if (customers.length === 0) loadCustomersData();
         if (products.length === 0) {
-          fetchModule("v1/eshop/products?Top=250", "products").then(p => setProducts(p as Product[]));
+          fetchModule("v1/eshop/products?Top=250", "products").then(p => {
+            if (p !== null) setProducts(p as Product[]);
+          });
         }
       } else if (tab === "customers") {
         await loadCustomersData();
@@ -300,8 +307,8 @@ export default function HomePage() {
           fetchModule("v1/jobOrder/jobOrders?Top=250", "jobOrders"),
           fetchModule("v1/jobOrder/tasks?Top=250", "tasks"),
         ]);
-        setJobOrders(jobs as JobOrder[]);
-        setTasks(jTasks as JobTask[]);
+        if (jobs !== null) setJobOrders(jobs as JobOrder[]);
+        if (jTasks !== null) setTasks(jTasks as JobTask[]);
         setLoadedTabs(prev => ({ ...prev, jobs: true }));
         if (customers.length === 0) loadCustomersData();
       } else if (tab === "documents") {
@@ -309,7 +316,7 @@ export default function HomePage() {
         if (!docs || docs.length === 0) {
           docs = await fetchModule("v1/Documents/ExternalDocuments?Top=100", "documents");
         }
-        setDocuments(docs as DocumentItem[]);
+        if (docs !== null) setDocuments(docs as DocumentItem[]);
         setLoadedTabs(prev => ({ ...prev, documents: true }));
       }
     } finally {
@@ -317,7 +324,7 @@ export default function HomePage() {
     }
   }, [customers.length, products.length]);
 
-  // Check authentication on initial load
+  // Check authentication on initial load (runs once on mount)
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -339,7 +346,8 @@ export default function HomePage() {
       }
     }
     checkAuth();
-  }, [router, loadDataForTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle tab switching and on-demand loading
   const handleSelectTab = (tab: TabId) => {

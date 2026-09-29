@@ -200,6 +200,7 @@ export function InvoiceFormModal({
       id: initialInvoice?.id || Math.floor(Math.random() * 90000) + 10000,
       number: invoiceNo,
       invoiceNo: invoiceNo,
+      documentTypeCode: docType,
       variableSymbol: variableSymbol || invoiceNo.replace(/\D/g, ""),
       constantSymbol,
       issueDate: new Date(issueDate).toISOString(),
