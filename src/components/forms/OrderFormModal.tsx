@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Order, OrderItem, Customer, Product } from "@/types/helios";
 import { safeCurrency, safeNumber } from "@/lib/table-utils";
+import { ProductPickerModal } from "./ProductPickerModal";
 
 interface OrderFormModalProps {
   isOpen: boolean;
@@ -84,6 +85,48 @@ export function OrderFormModal({
     const found = customers.find((c) => c.id === id);
     if (found) {
       setCustomCustomerName(found.name);
+    }
+  };
+
+  // Product Picker Modal State
+  const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
+  const [pickerTargetRow, setPickerTargetRow] = useState<number | "new">("new");
+
+  const handleSelectProduct = (prod: Product) => {
+    const itemData: Partial<OrderItem> = {
+      productId: prod.id,
+      name: prod.name,
+      measureUnit: prod.measureUnit || "ks",
+      unitPrice: prod.price || prod.unitPrice || 0,
+    };
+
+    if (pickerTargetRow === "new") {
+      setItems((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          quantity: 1,
+          ...itemData,
+        },
+      ]);
+    } else if (typeof pickerTargetRow === "number") {
+      handleUpdateItem(pickerTargetRow, itemData);
+    }
+  };
+
+  const handleItemNameChange = (idx: number, newName: string) => {
+    const matched = products.find(
+      (p) => p.name.toLowerCase() === newName.toLowerCase().trim()
+    );
+    if (matched) {
+      handleUpdateItem(idx, {
+        productId: matched.id,
+        name: matched.name,
+        measureUnit: matched.measureUnit || items[idx]?.measureUnit || "ks",
+        unitPrice: matched.price || matched.unitPrice || items[idx]?.unitPrice || 0,
+      });
+    } else {
+      handleUpdateItem(idx, { name: newName });
     }
   };
 
@@ -388,36 +431,41 @@ export function OrderFormModal({
                 <span>Položky objednávky ({items.length})</span>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                {products.length > 0 && (
-                  <select
-                    className="input-control"
-                    style={{ width: "auto", fontSize: "0.8rem", padding: "0.35rem 0.65rem" }}
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) handleAddItem(Number(e.target.value));
-                    }}
-                  >
-                    <option value="">+ Vložit ze skladu / ceníku...</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPickerTargetRow("new");
+                    setIsProductPickerOpen(true);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ padding: "0.4rem 0.85rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                  title="Otevřít katalog zboží pro výběr položky"
+                >
+                  <Package size={14} style={{ color: "var(--accent-cyan)" }} />
+                  <span>Vybrat ze skladu / ceníku...</span>
+                </button>
 
                 <button
                   type="button"
                   onClick={() => handleAddItem()}
-                  className="btn btn-secondary"
-                  style={{ padding: "0.35rem 0.85rem", fontSize: "0.8rem", gap: "0.3rem" }}
+                  className="btn btn-primary"
+                  style={{ padding: "0.4rem 0.85rem", fontSize: "0.8rem", gap: "0.35rem" }}
                 >
                   <Plus size={14} />
-                  <span>Přidat položku</span>
+                  <span>Přidat volný řádek</span>
                 </button>
               </div>
             </div>
+
+            {/* Datalist for order items autocomplete */}
+            <datalist id="order-products-datalist">
+              {products.map((p) => (
+                <option key={p.id} value={p.name}>
+                  {p.referenceId ? `[${p.referenceId}] ` : ""}{p.price ? `${safeCurrency(p.price)}` : ""}
+                </option>
+              ))}
+            </datalist>
 
             <div className="table-wrapper" style={{ maxHeight: "300px", overflowY: "auto" }}>
               <table className="erp-table" style={{ minWidth: "700px" }}>
@@ -441,12 +489,24 @@ export function OrderFormModal({
                         <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
                           <button
                             type="button"
+                            onClick={() => {
+                              setPickerTargetRow("new");
+                              setIsProductPickerOpen(true);
+                            }}
+                            className="btn btn-secondary"
+                            style={{ padding: "0.45rem 1rem", fontSize: "0.85rem", gap: "0.35rem" }}
+                          >
+                            <Package size={15} style={{ color: "var(--accent-cyan)" }} />
+                            <span>Vybrat ze skladu / ceníku</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleAddItem()}
                             className="btn btn-primary"
                             style={{ padding: "0.45rem 1rem", fontSize: "0.85rem", gap: "0.35rem" }}
                           >
                             <Plus size={15} />
-                            <span>Přidat volnou položku</span>
+                            <span>Přidat volný řádek</span>
                           </button>
                         </div>
                       </td>
@@ -455,15 +515,41 @@ export function OrderFormModal({
                     calculatedItems.map((item, idx) => (
                       <tr key={item.id || idx}>
                         <td>
-                          <input
-                            type="text"
-                            required
-                            className="input-control"
-                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
-                            value={item.name || ""}
-                            placeholder="Položka..."
-                            onChange={(e) => handleUpdateItem(idx, { name: e.target.value })}
-                          />
+                          <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
+                            <input
+                              type="text"
+                              required
+                              list="order-products-datalist"
+                              className="input-control"
+                              style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", flex: 1 }}
+                              value={item.name || ""}
+                              placeholder="Položka nebo název ze skladu..."
+                              onChange={(e) => handleItemNameChange(idx, e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPickerTargetRow(idx);
+                                setIsProductPickerOpen(true);
+                              }}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: "0.35rem 0.55rem",
+                                fontSize: "0.75rem",
+                                height: "32px",
+                                minWidth: "34px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--brand-primary)",
+                                borderColor: "rgba(59, 130, 246, 0.3)",
+                                fontWeight: 700,
+                              }}
+                              title="Vybrat položku ze skladu / ceníku (...)"
+                            >
+                              ...
+                            </button>
+                          </div>
                         </td>
                         <td>
                           <input
@@ -573,6 +659,14 @@ export function OrderFormModal({
             </button>
           </div>
         </form>
+
+        {/* Product Picker Modal */}
+        <ProductPickerModal
+          isOpen={isProductPickerOpen}
+          onClose={() => setIsProductPickerOpen(false)}
+          onSelectProduct={handleSelectProduct}
+          products={products}
+        />
       </div>
     </div>
   );

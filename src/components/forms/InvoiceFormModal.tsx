@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Invoice, InvoiceItem, Customer, Product } from "@/types/helios";
 import { safeCurrency, safeNumber } from "@/lib/table-utils";
+import { ProductPickerModal } from "./ProductPickerModal";
 
 interface InvoiceFormModalProps {
   isOpen: boolean;
@@ -103,6 +104,52 @@ export function InvoiceFormModal({
     if (found) {
       setCustomCustomerName(found.name);
       setCustomerTin(found.tin || "");
+    }
+  };
+
+  // Product Picker Modal State
+  const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
+  const [pickerTargetRow, setPickerTargetRow] = useState<number | "new">("new");
+
+  // When a product is selected from ProductPickerModal
+  const handleSelectProduct = (prod: Product) => {
+    const itemData: Partial<InvoiceItem> = {
+      productId: prod.id,
+      name: prod.name,
+      measureUnit: prod.measureUnit || "ks",
+      unitPrice: prod.price || prod.unitPrice || 0,
+      vatRate: prod.vatRate != null ? prod.vatRate : 21,
+    };
+
+    if (pickerTargetRow === "new") {
+      setItems((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          quantity: 1,
+          ...itemData,
+        },
+      ]);
+    } else if (typeof pickerTargetRow === "number") {
+      handleUpdateItem(pickerTargetRow, itemData);
+    }
+  };
+
+  // When user types in item name or selects from datalist
+  const handleItemNameChange = (idx: number, newName: string) => {
+    const matched = products.find(
+      (p) => p.name.toLowerCase() === newName.toLowerCase().trim()
+    );
+    if (matched) {
+      handleUpdateItem(idx, {
+        productId: matched.id,
+        name: matched.name,
+        measureUnit: matched.measureUnit || items[idx]?.measureUnit || "ks",
+        unitPrice: matched.price || matched.unitPrice || items[idx]?.unitPrice || 0,
+        vatRate: matched.vatRate != null ? matched.vatRate : (items[idx]?.vatRate ?? 21),
+      });
+    } else {
+      handleUpdateItem(idx, { name: newName });
     }
   };
 
@@ -485,49 +532,53 @@ export function InvoiceFormModal({
                 <span>Položky faktury ({items.length})</span>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                {/* Quick Product Inserter from Warehouse */}
-                {products.length > 0 && (
-                  <select
-                    className="input-control"
-                    style={{ width: "auto", fontSize: "0.8rem", padding: "0.35rem 0.65rem" }}
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) handleAddItem(Number(e.target.value));
-                    }}
-                  >
-                    <option value="">+ Vložit ze skladu / ceníku...</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.referenceId || `#${p.id}`})
-                      </option>
-                    ))}
-                  </select>
-                )}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPickerTargetRow("new");
+                    setIsProductPickerOpen(true);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ padding: "0.4rem 0.85rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                  title="Otevřít katalog zboží pro výběr položky"
+                >
+                  <Package size={14} style={{ color: "var(--brand-primary)" }} />
+                  <span>Vybrat ze skladu / ceníku...</span>
+                </button>
 
                 <button
                   type="button"
                   onClick={() => handleAddItem()}
                   className="btn btn-primary"
-                  style={{ padding: "0.35rem 0.85rem", fontSize: "0.8rem", gap: "0.3rem" }}
+                  style={{ padding: "0.4rem 0.85rem", fontSize: "0.8rem", gap: "0.35rem" }}
                 >
                   <Plus size={14} />
-                  <span>Přidat volnou položku</span>
+                  <span>Přidat volný řádek</span>
                 </button>
               </div>
             </div>
+
+            {/* Datalist for autocomplete suggestion as user types */}
+            <datalist id="invoice-products-datalist">
+              {products.map((p) => (
+                <option key={p.id} value={p.name}>
+                  {p.referenceId ? `[${p.referenceId}] ` : ""}{p.price ? `${safeCurrency(p.price)}` : ""}
+                </option>
+              ))}
+            </datalist>
 
             {/* Line Items Table */}
             <div className="table-wrapper" style={{ maxHeight: "350px", overflowY: "auto" }}>
               <table className="erp-table" style={{ minWidth: "820px" }}>
                 <thead>
                   <tr>
-                    <th style={{ width: "35%" }}>Název / Popis položky</th>
+                    <th style={{ width: "36%" }}>Název / Popis položky</th>
                     <th style={{ width: "12%" }}>Množství</th>
                     <th style={{ width: "10%" }}>Jednotka</th>
                     <th style={{ width: "15%" }}>Cena / ks bez DPH</th>
                     <th style={{ width: "12%" }}>Sazba DPH</th>
-                    <th style={{ width: "16%" }}>Celkem bez DPH</th>
+                    <th style={{ width: "15%" }}>Celkem bez DPH</th>
                     <th style={{ width: "40px", textAlign: "center" }}></th>
                   </tr>
                 </thead>
@@ -541,12 +592,24 @@ export function InvoiceFormModal({
                         <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
                           <button
                             type="button"
+                            onClick={() => {
+                              setPickerTargetRow("new");
+                              setIsProductPickerOpen(true);
+                            }}
+                            className="btn btn-secondary"
+                            style={{ padding: "0.45rem 1rem", fontSize: "0.85rem", gap: "0.35rem" }}
+                          >
+                            <Package size={15} style={{ color: "var(--brand-primary)" }} />
+                            <span>Vybrat ze skladu / ceníku</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleAddItem()}
                             className="btn btn-primary"
                             style={{ padding: "0.45rem 1rem", fontSize: "0.85rem", gap: "0.35rem" }}
                           >
                             <Plus size={15} />
-                            <span>Přidat volnou položku</span>
+                            <span>Přidat volný řádek</span>
                           </button>
                         </div>
                       </td>
@@ -555,15 +618,41 @@ export function InvoiceFormModal({
                     calculatedItems.map((item, idx) => (
                       <tr key={item.id || idx}>
                         <td>
-                          <input
-                            type="text"
-                            required
-                            className="input-control"
-                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
-                            value={item.name || ""}
-                            placeholder="Popis položky..."
-                            onChange={(e) => handleUpdateItem(idx, { name: e.target.value })}
-                          />
+                          <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
+                            <input
+                              type="text"
+                              required
+                              list="invoice-products-datalist"
+                              className="input-control"
+                              style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", flex: 1 }}
+                              value={item.name || ""}
+                              placeholder="Popis položky nebo název ze skladu..."
+                              onChange={(e) => handleItemNameChange(idx, e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPickerTargetRow(idx);
+                                setIsProductPickerOpen(true);
+                              }}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: "0.35rem 0.55rem",
+                                fontSize: "0.75rem",
+                                height: "32px",
+                                minWidth: "34px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--brand-primary)",
+                                borderColor: "rgba(16, 185, 129, 0.3)",
+                                fontWeight: 700,
+                              }}
+                              title="Vybrat položku ze skladu / ceníku (...)"
+                            >
+                              ...
+                            </button>
+                          </div>
                         </td>
                         <td>
                           <input
@@ -725,6 +814,14 @@ export function InvoiceFormModal({
             </button>
           </div>
         </form>
+
+        {/* Product Picker Modal */}
+        <ProductPickerModal
+          isOpen={isProductPickerOpen}
+          onClose={() => setIsProductPickerOpen(false)}
+          onSelectProduct={handleSelectProduct}
+          products={products}
+        />
       </div>
     </div>
   );
