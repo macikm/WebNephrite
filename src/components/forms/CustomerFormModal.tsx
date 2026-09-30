@@ -22,8 +22,6 @@ export function CustomerFormModal({
 }: CustomerFormModalProps) {
   useEscapeKey(onClose, isOpen);
 
-  if (!isOpen) return null;
-
   const activeInitial = initialCustomer || initialData;
   const isEdit = Boolean(activeInitial);
 
@@ -97,6 +95,8 @@ export function CustomerFormModal({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

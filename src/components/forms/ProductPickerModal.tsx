@@ -41,8 +41,6 @@ export function ProductPickerModal({
     return sortData(filteredProducts, sortKey, sortDirection);
   }, [filteredProducts, sortKey, sortDirection]);
 
-  if (!isOpen) return null;
-
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -51,6 +49,8 @@ export function ProductPickerModal({
       setSortDirection("asc");
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

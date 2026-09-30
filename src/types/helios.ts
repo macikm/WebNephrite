@@ -34,6 +34,9 @@ export interface InvoiceCustomer {
   id?: number;
   number?: string;
   name?: string;
+  vatId?: string;
+  idNumber?: string;
+  taxId?: string;
 }
 
 export interface InvoiceItem {
@@ -41,12 +44,21 @@ export interface InvoiceItem {
   itemId?: number;
   productId?: number;
   name?: string;
+  description?: string;
   quantity?: number;
   measureUnit?: string;
   unitPrice?: number;
+  unitAmount?: number;
+  basicAmount?: number;
   vatRate?: number;
   vatAmount?: number;
   totalPrice?: number;
+  totalPriceWithVat?: number;
+  product?: {
+    id?: number;
+    number?: string;
+    name?: string;
+  };
 }
 
 export interface Invoice {
@@ -58,6 +70,7 @@ export interface Invoice {
   issueDate?: string;
   dueDate?: string;
   vatDate?: string;
+  receivedDate?: string;
   transactionDate?: string;
   totalAmount: number;
   outstandingAmount: number;
@@ -71,6 +84,7 @@ export interface Invoice {
   tin?: string;
   note?: string;
   customer?: InvoiceCustomer;
+  supplier?: InvoiceCustomer & { vatId?: string; idNumber?: string; taxId?: string };
   items?: InvoiceItem[];
   jobOrder?: {
     id?: number;

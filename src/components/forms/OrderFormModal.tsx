@@ -41,8 +41,6 @@ export function OrderFormModal({
 }: OrderFormModalProps) {
   useEscapeKey(onClose, isOpen);
 
-  if (!isOpen) return null;
-
   const activeInitial = initialOrder || initialData;
   const isEdit = Boolean(activeInitial);
 
@@ -256,6 +254,8 @@ export function OrderFormModal({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div 

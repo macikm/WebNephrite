@@ -22,8 +22,6 @@ export function ProductFormModal({
 }: ProductFormModalProps) {
   useEscapeKey(onClose, isOpen);
 
-  if (!isOpen) return null;
-
   const activeInitial = initialProduct || initialData;
   const isEdit = Boolean(activeInitial);
 
@@ -93,6 +91,8 @@ export function ProductFormModal({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   X, 
   Plus, 
@@ -20,6 +20,45 @@ import { Invoice, InvoiceItem, Customer, Product } from "@/types/helios";
 import { safeCurrency, safeNumber } from "@/lib/table-utils";
 import { ProductPickerModal } from "./ProductPickerModal";
 import { useEscapeKey } from "@/lib/useEscapeKey";
+
+// Helper to map legacy VAT rates (10% or 15%) to standard 21%
+function resolveVatRate(rawRate: any): number {
+  const num = Number(rawRate);
+  if (isNaN(num)) return 21;
+  if (num === 10 || num === 15) return 21;
+  return num;
+}
+
+function mapInitialItems(rawItems?: any[]): InvoiceItem[] {
+  if (!rawItems || rawItems.length === 0) return [];
+  return rawItems.map((i, idx) => {
+    const rawUnitPrice = i.unitPrice ?? i.unitAmount ?? (i.quantity ? (i.basicAmount ?? 0) / i.quantity : (i.basicAmount ?? 0));
+    const rawVatAmount = i.vatAmount ?? i.vat;
+    const nameStr = i.name || i.description || (i.product?.name ? `${i.product.number ? `[${i.product.number}] ` : ''}${i.product.name}` : `Položka ${idx + 1}`);
+    const qty = Number(i.quantity) || 1;
+    const price = Number(rawUnitPrice) || 0;
+    const vatRate = resolveVatRate(i.vatRate ?? 21);
+    const lineTotal = Number(i.totalPrice) || (price * qty * (1 + vatRate / 100));
+
+    return {
+      id: i.id || (idx + 1),
+      productId: i.productId ?? i.product?.id,
+      name: nameStr,
+      quantity: qty,
+      measureUnit: i.measureUnit || "ks",
+      unitPrice: price,
+      vatRate: vatRate,
+      vatAmount: rawVatAmount != null ? Number(rawVatAmount) : undefined,
+      totalPriceWithVat: lineTotal,
+    };
+  });
+}
+
+const getInitialIssueDate = (inv: Invoice | null | undefined, todayStr: string) => {
+  if (!inv) return todayStr;
+  const raw = inv.issueDate || inv.receivedDate || inv.transactionDate;
+  return raw ? raw.split("T")[0] : todayStr;
+};
 
 interface InvoiceFormModalProps {
   isOpen: boolean;
@@ -44,37 +83,54 @@ export function InvoiceFormModal({
 }: InvoiceFormModalProps) {
   useEscapeKey(onClose, isOpen);
 
-  if (!isOpen) return null;
-
   const activeInitial = initialInvoice || initialData;
   const isEdit = Boolean(activeInitial);
 
+  const initialPartnerName = 
+    activeInitial?.supplier?.name ||
+    activeInitial?.customer?.name ||
+    "";
+  const initialPartnerId = 
+    activeInitial?.supplier?.id ||
+    activeInitial?.customer?.id ||
+    "";
+  const initialPartnerTin = 
+    activeInitial?.tin ||
+    activeInitial?.supplier?.vatId ||
+    activeInitial?.supplier?.taxId ||
+    activeInitial?.supplier?.idNumber ||
+    activeInitial?.customer?.vatId ||
+    activeInitial?.customer?.taxId ||
+    activeInitial?.customer?.idNumber ||
+    "";
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const in14Days = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
   // Form State
   const [docType, setDocType] = useState<"issued" | "received">(
-    activeInitial?.documentTypeCode === "received" ? "received" : (activeInitial ? defaultType : defaultType)
+    activeInitial?.documentTypeCode === "received" ? "received" : (defaultType === "received" ? "received" : "issued")
   );
   const [invoiceNo, setInvoiceNo] = useState(
     activeInitial?.invoiceNo || activeInitial?.number || `FV${new Date().getFullYear()}${String(Math.floor(Math.random() * 900) + 100)}`
   );
   const [variableSymbol, setVariableSymbol] = useState(
-    activeInitial?.variableSymbol || invoiceNo.replace(/\D/g, "") || String(Date.now()).slice(-8)
+    activeInitial?.variableSymbol || (activeInitial?.invoiceNo || activeInitial?.number || "").replace(/\D/g, "") || String(Date.now()).slice(-8)
   );
   const [constantSymbol, setConstantSymbol] = useState(activeInitial?.constantSymbol || "0308");
   
-  // Customer
+  // Customer / Supplier
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | "">(
-    activeInitial?.customer?.id || ""
+    initialPartnerId
   );
   const [customCustomerName, setCustomCustomerName] = useState(
-    activeInitial?.customer?.name || ""
+    initialPartnerName
   );
-  const [customerTin, setCustomerTin] = useState(activeInitial?.tin || "");
+  const [customerTin, setCustomerTin] = useState(initialPartnerTin);
 
   // Dates
-  const todayStr = new Date().toISOString().split("T")[0];
-  const in14Days = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const [issueDate, setIssueDate] = useState(
-    activeInitial?.issueDate ? activeInitial.issueDate.split("T")[0] : todayStr
+    getInitialIssueDate(activeInitial, todayStr)
   );
   const [dueDate, setDueDate] = useState(
     activeInitial?.dueDate ? activeInitial.dueDate.split("T")[0] : in14Days
@@ -90,7 +146,7 @@ export function InvoiceFormModal({
 
   // Line items
   const [items, setItems] = useState<InvoiceItem[]>(
-    activeInitial?.items && activeInitial.items.length > 0 ? activeInitial.items : []
+    mapInitialItems(activeInitial?.items)
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,13 +156,30 @@ export function InvoiceFormModal({
   const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
   const [pickerTargetRow, setPickerTargetRow] = useState<number | "new">("new");
 
-  // Helper to map legacy VAT rates (10% or 15%) to standard 21%
-  const resolveVatRate = (rawRate: any): number => {
-    const num = Number(rawRate);
-    if (isNaN(num)) return 21;
-    if (num === 10 || num === 15) return 21;
-    return num;
-  };
+  // Sync state whenever activeInitial or isOpen changes
+  useEffect(() => {
+    if (!isOpen) return;
+    const pName = activeInitial?.supplier?.name || activeInitial?.customer?.name || "";
+    const pId = activeInitial?.supplier?.id || activeInitial?.customer?.id || "";
+    const pTin = activeInitial?.tin || activeInitial?.supplier?.vatId || activeInitial?.supplier?.taxId || activeInitial?.supplier?.idNumber || activeInitial?.customer?.vatId || activeInitial?.customer?.taxId || activeInitial?.customer?.idNumber || "";
+    const invNum = activeInitial?.invoiceNo || activeInitial?.number || `FV${new Date().getFullYear()}${String(Math.floor(Math.random() * 900) + 100)}`;
+
+    setDocType(activeInitial?.documentTypeCode === "received" ? "received" : (defaultType === "received" ? "received" : "issued"));
+    setInvoiceNo(invNum);
+    setVariableSymbol(activeInitial?.variableSymbol || invNum.replace(/\D/g, "") || String(Date.now()).slice(-8));
+    setConstantSymbol(activeInitial?.constantSymbol || "0308");
+    setSelectedCustomerId(pId);
+    setCustomCustomerName(pName);
+    setCustomerTin(pTin);
+    setIssueDate(getInitialIssueDate(activeInitial, todayStr));
+    setDueDate(activeInitial?.dueDate ? activeInitial.dueDate.split("T")[0] : in14Days);
+    setVatDate(activeInitial?.vatDate ? activeInitial.vatDate.split("T")[0] : todayStr);
+    setPaymentType(activeInitial?.paymentType || "Bankovní převod");
+    setCurrencyCode(activeInitial?.currencyCode || "CZK");
+    setNote(activeInitial?.note || "");
+    setItems(mapInitialItems(activeInitial?.items));
+    setErrorMessage(null);
+  }, [isOpen, activeInitial, defaultType]);
 
   // When customer dropdown changes
   const handleCustomerSelect = (idStr: string) => {
@@ -268,6 +341,11 @@ export function InvoiceFormModal({
         id: partnerId,
         name: partnerName,
       },
+      supplier: {
+        id: partnerId,
+        name: partnerName,
+        vatId: customerTin,
+      },
       items: calculatedItems.map((i) => ({
         id: i.id,
         productId: i.productId,
@@ -311,6 +389,8 @@ export function InvoiceFormModal({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div 

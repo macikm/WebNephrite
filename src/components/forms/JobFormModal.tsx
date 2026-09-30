@@ -39,8 +39,6 @@ export function JobFormModal({
 }: JobFormModalProps) {
   useEscapeKey(onClose, isOpen);
 
-  if (!isOpen) return null;
-
   const activeInitial = initialJob || initialData;
   const isEdit = Boolean(activeInitial);
 
@@ -262,6 +260,8 @@ export function JobFormModal({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

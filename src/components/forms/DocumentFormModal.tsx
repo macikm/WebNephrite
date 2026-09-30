@@ -22,8 +22,6 @@ export function DocumentFormModal({
 }: DocumentFormModalProps) {
   useEscapeKey(onClose, isOpen);
 
-  if (!isOpen) return null;
-
   const activeInitial = initialDocument || initialData;
   const isEdit = Boolean(activeInitial);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -145,6 +143,8 @@ export function DocumentFormModal({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

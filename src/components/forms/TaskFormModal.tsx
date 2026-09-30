@@ -24,8 +24,6 @@ export function TaskFormModal({
 }: TaskFormModalProps) {
   useEscapeKey(onClose, isOpen);
 
-  if (!isOpen) return null;
-
   const activeInitial = initialTask || initialData;
   const isEdit = Boolean(activeInitial);
 
@@ -92,6 +90,8 @@ export function TaskFormModal({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

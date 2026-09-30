@@ -26,8 +26,6 @@ export function ContactFormModal({
 }: ContactFormModalProps) {
   useEscapeKey(onClose, isOpen);
 
-  if (!isOpen) return null;
-
   const activeInitial = initialContact || initialData;
   const companyList = companies.length > 0 ? companies : customers;
   const isEdit = Boolean(activeInitial);
@@ -118,6 +116,8 @@ export function ContactFormModal({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

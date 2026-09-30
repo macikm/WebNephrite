@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { DocumentItem } from "@/types/helios";
 import { 
   FolderArchive, 
@@ -35,6 +36,11 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isViewerMaximized, setIsViewerMaximized] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEscapeKey(() => {
     if (isViewerMaximized) {
@@ -338,140 +344,162 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
         </div>
 
         {/* Integrated DMS Document Viewer Modal */}
-        {selectedDoc && (
-          <div 
-            className="modal-backdrop" 
-            style={isViewerMaximized ? { padding: 0 } : undefined}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setSelectedDoc(null);
-                setIsViewerMaximized(false);
-              }
-            }}
-          >
+        {selectedDoc && (() => {
+          const viewerModalContent = (
             <div 
-              className="modal-dialog animate-fade-in" 
-              style={
-                isViewerMaximized
-                  ? {
-                      position: "fixed",
-                      top: "16px",
-                      left: "16px",
-                      right: "16px",
-                      bottom: "16px",
-                      width: "calc(100vw - 32px)",
-                      height: "calc(100vh - 32px)",
-                      maxWidth: "none",
-                      maxHeight: "none",
-                      display: "flex",
-                      flexDirection: "column",
-                      padding: "1.25rem",
-                      borderRadius: "8px",
-                      background: "#ffffff",
-                      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-                      overflow: "hidden",
-                      zIndex: 10000,
-                    }
-                  : {
-                      maxWidth: "860px",
-                      width: "100%",
-                      padding: "1.5rem",
-                    }
-              }
+              className="modal-backdrop" 
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                inset: 0,
+                width: "100vw",
+                height: "100vh",
+                zIndex: 99999,
+                padding: isViewerMaximized ? 0 : "1.5rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxSizing: "border-box",
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setSelectedDoc(null);
+                  setIsViewerMaximized(false);
+                }
+              }}
             >
-              {/* Modal Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", flexShrink: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                  <div style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "6px",
-                    background: "#e0f2fe",
-                    border: "1px solid #bae6fd",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#0284c7",
-                  }}>
-                    <FolderArchive size={20} />
-                  </div>
-                  <div>
-                    <h2 style={{ fontSize: "1.2rem", fontWeight: 800 }}>
-                      {safeString(selectedDoc.name, "Prohlížeč dokumentu")}
-                    </h2>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "flex", gap: "0.75rem" }}>
-                      <span>Ref: {safeString(selectedDoc.reference || selectedDoc.documentNumber, `#${selectedDoc.id}`)}</span>
-                      <span>•</span>
-                      <span>Velikost: {formatFileSize(selectedDoc.fileContentLength)}</span>
+              <div 
+                className="modal-dialog animate-fade-in" 
+                style={
+                  isViewerMaximized
+                    ? {
+                        position: "fixed",
+                        top: "16px",
+                        left: "16px",
+                        right: "16px",
+                        bottom: "16px",
+                        width: "calc(100vw - 32px)",
+                        height: "calc(100vh - 32px)",
+                        maxWidth: "none",
+                        maxHeight: "none",
+                        display: "flex",
+                        flexDirection: "column",
+                        padding: "1.25rem",
+                        borderRadius: "8px",
+                        background: "#ffffff",
+                        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                        overflow: "hidden",
+                        zIndex: 100000,
+                        boxSizing: "border-box",
+                      }
+                    : {
+                        maxWidth: "960px",
+                        width: "calc(100% - 2rem)",
+                        maxHeight: "90vh",
+                        display: "flex",
+                        flexDirection: "column",
+                        padding: "1.5rem",
+                        boxSizing: "border-box",
+                      }
+                }
+              >
+                {/* Modal Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexShrink: 0, gap: "1rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0, flex: 1 }}>
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "6px",
+                      background: "#e0f2fe",
+                      border: "1px solid #bae6fd",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#0284c7",
+                      flexShrink: 0,
+                    }}>
+                      <FolderArchive size={20} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <h2 style={{ fontSize: "1.2rem", fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {safeString(selectedDoc.name, "Prohlížeč dokumentu")}
+                      </h2>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "flex", gap: "0.75rem", whiteSpace: "nowrap" }}>
+                        <span>Ref: {safeString(selectedDoc.reference || selectedDoc.documentNumber, `#${selectedDoc.id}`)}</span>
+                        <span>•</span>
+                        <span>Velikost: {formatFileSize(selectedDoc.fileContentLength)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <button
-                    onClick={() => {
-                      const d = selectedDoc;
-                      setSelectedDoc(null);
-                      setEditingDoc(d);
-                      setIsFormOpen(true);
-                    }}
-                    className="btn btn-primary"
-                    style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem", gap: "0.35rem" }}
-                  >
-                    <Edit3 size={14} />
-                    <span>Upravit</span>
-                  </button>
-                  {selectedDoc.fileContent && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
                     <button
-                      onClick={() => handleDownload(selectedDoc)}
-                      className="btn btn-secondary"
-                      style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
+                      onClick={() => {
+                        const d = selectedDoc;
+                        setSelectedDoc(null);
+                        setEditingDoc(d);
+                        setIsFormOpen(true);
+                      }}
+                      className="btn btn-primary"
+                      style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem", gap: "0.35rem", display: "inline-flex", alignItems: "center" }}
                     >
-                      <Download size={14} />
-                      <span>Stáhnout</span>
+                      <Edit3 size={14} />
+                      <span>Upravit</span>
                     </button>
-                  )}
-                  <button
-                    onClick={() => setIsViewerMaximized(!isViewerMaximized)}
-                    style={{
-                      width: "30px",
-                      height: "30px",
-                      borderRadius: "6px",
-                      background: isViewerMaximized ? "#e0f2fe" : "#ffffff",
-                      border: isViewerMaximized ? "1px solid #bae6fd" : "1px solid #cbd5e1",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: isViewerMaximized ? "#0284c7" : "#64748b",
-                      cursor: "pointer",
-                    }}
-                    title={isViewerMaximized ? "Zmenšit okno" : "Maximalizovat prohlížeč"}
-                  >
-                    {isViewerMaximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedDoc(null);
-                      setIsViewerMaximized(false);
-                    }}
-                    style={{
-                      width: "30px",
-                      height: "30px",
-                      borderRadius: "6px",
-                      background: "#ffffff",
-                      border: "1px solid #cbd5e1",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#64748b",
-                      cursor: "pointer",
-                    }}
-                    title="Zavřít prohlížeč (Esc)"
-                  >
-                    <X size={15} />
-                  </button>
+                    {selectedDoc.fileContent && (
+                      <button
+                        onClick={() => handleDownload(selectedDoc)}
+                        className="btn btn-secondary"
+                        style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+                      >
+                        <Download size={14} />
+                        <span>Stáhnout</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setIsViewerMaximized(!isViewerMaximized)}
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "6px",
+                        background: isViewerMaximized ? "#e0f2fe" : "#ffffff",
+                        border: isViewerMaximized ? "1px solid #bae6fd" : "1px solid #cbd5e1",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: isViewerMaximized ? "#0284c7" : "#64748b",
+                        cursor: "pointer",
+                      }}
+                      title={isViewerMaximized ? "Zmenšit okno" : "Maximalizovat prohlížeč"}
+                    >
+                      {isViewerMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedDoc(null);
+                        setIsViewerMaximized(false);
+                      }}
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "6px",
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#64748b",
+                        cursor: "pointer",
+                      }}
+                      title="Zavřít prohlížeč (Esc)"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
 
               {/* Integrated Viewer Body */}
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem", flex: 1, minHeight: 0 }}>
@@ -588,7 +616,9 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
               </div>
             </div>
           </div>
-        )}
+        );
+        return mounted ? createPortal(viewerModalContent, document.body) : viewerModalContent;
+      })()}
 
         {/* Form Modal for Create / Edit */}
         {isFormOpen && (

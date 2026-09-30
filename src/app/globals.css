@@ -519,6 +519,7 @@ button {
   left: 0;
   right: 0;
   bottom: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
   background: rgba(15, 23, 42, 0.45);
@@ -527,8 +528,9 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 10000;
   padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .modal-dialog {
@@ -613,8 +615,8 @@ button {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animate-fade-in {

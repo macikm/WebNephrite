@@ -41,8 +41,15 @@ export function DashboardView({
   const issuedTotal = invoicesIssued.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
   const unpaidIssuedCount = invoicesIssued.filter(i => i.invPaymentStatusCode === "unpaid").length;
 
-  const receivedOutstanding = invoicesReceived.reduce((sum, inv) => sum + (Number(inv.outstandingAmount) || 0), 0);
+  const receivedOutstanding = invoicesReceived.reduce((sum, inv) => {
+    const isPaid = inv.invPaymentStatusCode === "paid";
+    const amt = inv.outstandingAmount != null 
+      ? Number(inv.outstandingAmount) 
+      : (isPaid ? 0 : Number(inv.totalAmount) || 0);
+    return sum + (isNaN(amt) ? 0 : amt);
+  }, 0);
   const receivedTotal = invoicesReceived.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
+  const unpaidReceivedCount = invoicesReceived.filter(i => i.invPaymentStatusCode !== "paid").length;
 
   const recentInvoices = [...invoicesIssued].slice(0, 6);
 
@@ -144,7 +151,9 @@ export function DashboardView({
             {safeCurrency(receivedOutstanding)}
           </div>
           <div style={{ fontSize: "0.8rem", color: "#64748b", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-            <span>K úhradě dodavatelům</span>
+            <span style={{ color: unpaidReceivedCount > 0 ? "#d97706" : "#16a34a", fontWeight: 600 }}>
+              {unpaidReceivedCount} neuhrazených
+            </span>
             <span>•</span>
             <span>Celkem: {safeCurrency(receivedTotal)}</span>
           </div>

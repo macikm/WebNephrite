@@ -93,9 +93,10 @@ export function InvoicesView({
     const term = search.toLowerCase().trim();
     const invoiceNum = safeString(inv.invoiceNo || inv.number, "").toLowerCase();
     const vs = safeString(inv.variableSymbol, "").toLowerCase();
-    const custName = safeString(inv.customer?.name, "").toLowerCase();
+    const custName = safeString(inv.supplier?.name || inv.customer?.name, "").toLowerCase();
+    const tinStr = safeString(inv.tin || inv.supplier?.vatId || inv.supplier?.idNumber || inv.customer?.vatId, "").toLowerCase();
 
-    const matchesSearch = !term || invoiceNum.includes(term) || vs.includes(term) || custName.includes(term);
+    const matchesSearch = !term || invoiceNum.includes(term) || vs.includes(term) || custName.includes(term) || tinStr.includes(term);
 
     const isPaid = inv.invPaymentStatusCode === "paid";
     const matchesStatus = 
@@ -116,7 +117,11 @@ export function InvoicesView({
   );
 
   const totalAmount = filteredInvoices.reduce((sum, i) => sum + safeNumber(i.totalAmount, 0), 0);
-  const totalOutstanding = filteredInvoices.reduce((sum, i) => sum + safeNumber(i.outstandingAmount, 0), 0);
+  const totalOutstanding = filteredInvoices.reduce((sum, i) => {
+    const isPaid = i.invPaymentStatusCode === "paid";
+    const out = i.outstandingAmount != null ? safeNumber(i.outstandingAmount, 0) : (isPaid ? 0 : safeNumber(i.totalAmount, 0));
+    return sum + out;
+  }, 0);
 
   // Currently selected invoice object
   const activeSelected = currentList.find(i => i.id === selectedRowId) || null;
@@ -129,10 +134,14 @@ export function InvoicesView({
   };
 
   const handleExportCsv = () => {
-    const headers = "Cislo;VS;Partner;Vystaveno;Splatnost;Castka;Zbyva;Stav\n";
-    const rows = filteredInvoices.map(i => 
-      `"${i.invoiceNo || i.id}";"${i.variableSymbol || ''}";"${i.customer?.name || ''}";"${safeDate(i.issueDate)}";"${safeDate(i.dueDate)}";"${i.totalAmount}";"${i.outstandingAmount}";"${i.invPaymentStatusCode}"`
-    ).join("\n");
+    const headers = "Cislo;VS;Partner;ICO_DIC;Vystaveno;Splatnost;Castka;Zbyva;Stav\n";
+    const rows = filteredInvoices.map(i => {
+      const pName = i.supplier?.name || i.customer?.name || '';
+      const pTin = i.tin || i.supplier?.vatId || i.customer?.vatId || '';
+      const isPaid = i.invPaymentStatusCode === "paid";
+      const out = i.outstandingAmount != null ? i.outstandingAmount : (isPaid ? 0 : i.totalAmount);
+      return `"${i.invoiceNo || i.number || i.id}";"${i.variableSymbol || ''}";"${pName}";"${pTin}";"${safeDate(i.issueDate || i.receivedDate || i.transactionDate)}";"${safeDate(i.dueDate)}";"${i.totalAmount}";"${out}";"${i.invPaymentStatusCode}"`;
+    }).join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -417,8 +426,8 @@ export function InvoicesView({
                     style={{ width: "140px" }}
                   />
                   <SortableHeader
-                    label="Partner / Odběratel"
-                    columnKey="customer.name"
+                    label={activeType === "issued" ? "Partner / Odběratel" : "Partner / Dodavatel"}
+                    columnKey={activeType === "issued" ? "customer.name" : "supplier.name"}
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
@@ -485,9 +494,13 @@ export function InvoicesView({
                     const isSelected = selectedRowId === inv.id;
                     const docNum = safeString(inv.invoiceNo || inv.number, `#${inv.id}`);
                     const vs = safeString(inv.variableSymbol, "—");
-                    const partner = safeString(inv.customer?.name, "Nezadáno");
+                    const partnerName = safeString(inv.supplier?.name || inv.customer?.name, "Nezadáno");
+                    const partnerTin = safeString(inv.tin || inv.supplier?.vatId || inv.supplier?.taxId || inv.supplier?.idNumber || inv.customer?.vatId, "");
                     const total = safeNumber(inv.totalAmount, 0);
-                    const outstanding = safeNumber(inv.outstandingAmount, 0);
+                    const outstanding = inv.outstandingAmount != null 
+                      ? safeNumber(inv.outstandingAmount, 0)
+                      : (isPaid ? 0 : total);
+                    const dateToShow = inv.issueDate || inv.receivedDate || inv.transactionDate;
 
                     return (
                       <tr 
@@ -507,10 +520,10 @@ export function InvoicesView({
                           {vs}
                         </td>
                         <td>
-                          <div style={{ fontWeight: 600 }}>{partner}</div>
-                          {inv.tin && <div style={{ fontSize: "0.725rem", opacity: isSelected ? 0.9 : 0.7 }}>IČ/DIČ: {safeString(inv.tin)}</div>}
+                          <div style={{ fontWeight: 600 }}>{partnerName}</div>
+                          {partnerTin && <div style={{ fontSize: "0.725rem", opacity: isSelected ? 0.9 : 0.7 }}>IČ/DIČ: {partnerTin}</div>}
                         </td>
-                        <td>{safeDate(inv.issueDate)}</td>
+                        <td>{safeDate(dateToShow)}</td>
                         <td style={{ fontWeight: !isPaid ? 600 : 400 }}>
                           {safeDate(inv.dueDate)}
                         </td>
@@ -650,14 +663,14 @@ export function InvoicesView({
                 }}>
                   <div>
                     <div style={{ fontSize: "0.725rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>
-                      Odběratel / Partner
+                      {activeType === "issued" ? "Odběratel / Partner" : "Dodavatel / Partner"}
                     </div>
                     <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1e293b", marginTop: "0.25rem" }}>
-                      {safeString(selectedInvoice.customer?.name, "Nezadáno")}
+                      {safeString(selectedInvoice.supplier?.name || selectedInvoice.customer?.name, "Nezadáno")}
                     </div>
-                    {selectedInvoice.tin && (
+                    {(selectedInvoice.tin || selectedInvoice.supplier?.vatId || selectedInvoice.supplier?.idNumber) && (
                       <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "0.15rem" }}>
-                        IČ/DIČ: {safeString(selectedInvoice.tin)}
+                        IČ/DIČ: {safeString(selectedInvoice.tin || selectedInvoice.supplier?.vatId || selectedInvoice.supplier?.idNumber)}
                       </div>
                     )}
                   </div>
@@ -684,7 +697,9 @@ export function InvoicesView({
                 }}>
                   <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
                     <div style={{ color: "#64748b", fontSize: "0.725rem" }}>Datum vystavení</div>
-                    <div style={{ fontWeight: 600, color: "#1e293b", marginTop: "0.2rem" }}>{safeDate(selectedInvoice.issueDate)}</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b", marginTop: "0.2rem" }}>
+                      {safeDate(selectedInvoice.issueDate || selectedInvoice.receivedDate || selectedInvoice.transactionDate)}
+                    </div>
                   </div>
 
                   <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
@@ -721,7 +736,7 @@ export function InvoicesView({
                       ) : (
                         <span className="badge badge-unpaid">
                           <Clock size={13} />
-                          <span>Neuhrazeno • Zbývá: {safeCurrency(selectedInvoice.outstandingAmount)}</span>
+                          <span>Neuhrazeno • Zbývá: {safeCurrency(selectedInvoice.outstandingAmount != null ? selectedInvoice.outstandingAmount : selectedInvoice.totalAmount)}</span>
                         </span>
                       )}
                     </div>
@@ -762,11 +777,16 @@ export function InvoicesView({
 
         {/* Invoice Creation & Editing Modal */}
         <InvoiceFormModal
+          key={editingInvoice ? `${editingInvoice.id}-${editingInvoice.invoiceNo || editingInvoice.number || ''}` : `new-${activeType}`}
           isOpen={isFormOpen}
-          onClose={() => setIsFormOpen(false)}
+          onClose={() => {
+            setIsFormOpen(false);
+            setEditingInvoice(null);
+          }}
           onSave={(saved) => {
             onSaveInvoice?.(saved);
             setIsFormOpen(false);
+            setEditingInvoice(null);
           }}
           initialInvoice={editingInvoice}
           defaultType={activeType}
