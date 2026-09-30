@@ -22,6 +22,7 @@ import { Pagination } from "./Pagination";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { DocumentFormModal } from "./forms/DocumentFormModal";
 import { SortDirection, sortData, safeString, safeDate } from "@/lib/table-utils";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface DocumentsViewProps {
   documents: DocumentItem[];
@@ -34,6 +35,14 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isViewerMaximized, setIsViewerMaximized] = useState(false);
+
+  useEscapeKey(() => {
+    if (isViewerMaximized) {
+      setIsViewerMaximized(false);
+    } else {
+      setSelectedDoc(null);
+    }
+  }, Boolean(selectedDoc));
 
   // Form modal states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -332,25 +341,46 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
         {selectedDoc && (
           <div 
             className="modal-backdrop" 
+            style={isViewerMaximized ? { padding: 0 } : undefined}
             onClick={(e) => {
-              if (e.target === e.currentTarget) setSelectedDoc(null);
+              if (e.target === e.currentTarget) {
+                setSelectedDoc(null);
+                setIsViewerMaximized(false);
+              }
             }}
           >
             <div 
               className="modal-dialog animate-fade-in" 
-              style={{ 
-                maxWidth: isViewerMaximized ? "97vw" : "860px", 
-                width: isViewerMaximized ? "97vw" : "100%",
-                height: isViewerMaximized ? "94vh" : "auto",
-                maxHeight: isViewerMaximized ? "94vh" : "90vh",
-                display: "flex",
-                flexDirection: "column",
-                padding: "1.25rem",
-                transition: "all 0.2s ease-in-out"
-              }}
+              style={
+                isViewerMaximized
+                  ? {
+                      position: "fixed",
+                      top: "16px",
+                      left: "16px",
+                      right: "16px",
+                      bottom: "16px",
+                      width: "calc(100vw - 32px)",
+                      height: "calc(100vh - 32px)",
+                      maxWidth: "none",
+                      maxHeight: "none",
+                      display: "flex",
+                      flexDirection: "column",
+                      padding: "1.25rem",
+                      borderRadius: "8px",
+                      background: "#ffffff",
+                      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                      overflow: "hidden",
+                      zIndex: 10000,
+                    }
+                  : {
+                      maxWidth: "860px",
+                      width: "100%",
+                      padding: "1.5rem",
+                    }
+              }
             >
               {/* Modal Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                   <div style={{
                     width: "40px",
@@ -436,7 +466,7 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
                       color: "#64748b",
                       cursor: "pointer",
                     }}
-                    title="Zavřít prohlížeč"
+                    title="Zavřít prohlížeč (Esc)"
                   >
                     <X size={15} />
                   </button>
@@ -470,8 +500,9 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
                       border: "1px solid var(--border-subtle)",
                       background: "#1e293b",
                       flex: 1,
-                      minHeight: isViewerMaximized ? "calc(94vh - 140px)" : "600px",
-                      height: isViewerMaximized ? "calc(94vh - 140px)" : "600px",
+                      minHeight: 0,
+                      width: "100%",
+                      height: isViewerMaximized ? "100%" : "600px",
                     }}>
                       <iframe
                         src={`data:application/pdf;base64,${selectedDoc.fileContent}`}
@@ -489,13 +520,13 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
                       borderRadius: "var(--radius-md)",
                       border: "1px solid var(--border-subtle)",
                       flex: 1,
+                      minHeight: 0,
                       overflow: "auto",
-                      maxHeight: isViewerMaximized ? "calc(94vh - 140px)" : "600px",
                     }}>
                       <img
                         src={`data:image/jpeg;base64,${selectedDoc.fileContent}`}
                         alt={selectedDoc.name}
-                        style={{ maxWidth: "100%", maxHeight: isViewerMaximized ? "calc(94vh - 160px)" : "560px", objectFit: "contain", borderRadius: "4px" }}
+                        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: "4px" }}
                       />
                     </div>
                   ) : (

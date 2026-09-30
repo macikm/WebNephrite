@@ -9,6 +9,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { JobFormModal } from "./forms/JobFormModal";
 import { TaskFormModal } from "./forms/TaskFormModal";
 import { SortDirection, sortData, safeString, safeNumber, safeDate, safeCurrency } from "@/lib/table-utils";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface JobsViewProps {
   jobOrders: JobOrder[];
@@ -33,6 +34,11 @@ export function JobsView({
   const [search, setSearch] = useState("");
   const [selectedJob, setSelectedJob] = useState<JobOrder | null>(null);
   const [selectedTask, setSelectedTask] = useState<JobTask | null>(null);
+
+  useEscapeKey(() => {
+    if (selectedJob) setSelectedJob(null);
+    else if (selectedTask) setSelectedTask(null);
+  }, Boolean(selectedJob || selectedTask));
   const [selectedRowId, setSelectedRowId] = useState<number | string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, User, Save, AlertCircle, Phone, Mail, Building, Briefcase } from "lucide-react";
 import { ContactPerson, Customer } from "@/types/helios";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface ContactFormModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export function ContactFormModal({
   customers = [],
   companies = [],
 }: ContactFormModalProps) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   const activeInitial = initialContact || initialData;

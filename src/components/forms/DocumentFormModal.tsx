@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { X, FolderArchive, Save, AlertCircle, UploadCloud, File, FileText, CheckCircle2 } from "lucide-react";
 import { DocumentItem } from "@/types/helios";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface DocumentFormModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ export function DocumentFormModal({
   initialDocument,
   initialData,
 }: DocumentFormModalProps) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   const activeInitial = initialDocument || initialData;

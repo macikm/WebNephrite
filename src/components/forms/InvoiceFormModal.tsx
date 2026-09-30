@@ -19,6 +19,7 @@ import {
 import { Invoice, InvoiceItem, Customer, Product } from "@/types/helios";
 import { safeCurrency, safeNumber } from "@/lib/table-utils";
 import { ProductPickerModal } from "./ProductPickerModal";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface InvoiceFormModalProps {
   isOpen: boolean;
@@ -41,6 +42,8 @@ export function InvoiceFormModal({
   customers,
   products,
 }: InvoiceFormModalProps) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   const activeInitial = initialInvoice || initialData;

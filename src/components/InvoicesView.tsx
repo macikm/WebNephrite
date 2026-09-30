@@ -31,6 +31,7 @@ import {
   safeDate, 
   safeCurrency 
 } from "@/lib/table-utils";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface InvoicesViewProps {
   invoicesIssued: Invoice[];
@@ -57,6 +58,10 @@ export function InvoicesView({
   const [statusFilter, setStatusFilter] = useState<"all" | "unpaid" | "paid">("all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  useEscapeKey(() => {
+    if (selectedInvoice) setSelectedInvoice(null);
+  }, Boolean(selectedInvoice));
   const [selectedRowId, setSelectedRowId] = useState<number | string | null>(null);
 
   // Form modal state

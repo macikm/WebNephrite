@@ -22,6 +22,7 @@ import {
   safeString, 
   safeNumber 
 } from "@/lib/table-utils";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface ProductsViewProps {
   products: Product[];
@@ -32,6 +33,10 @@ interface ProductsViewProps {
 export function ProductsView({ products, isLoading, onSaveProduct }: ProductsViewProps) {
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  useEscapeKey(() => {
+    if (selectedProduct) setSelectedProduct(null);
+  }, Boolean(selectedProduct));
 
   // Form modal state
   const [isFormOpen, setIsFormOpen] = useState(false);

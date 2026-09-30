@@ -16,6 +16,7 @@ import {
 import { Order, OrderItem, Customer, Product } from "@/types/helios";
 import { safeCurrency, safeNumber } from "@/lib/table-utils";
 import { ProductPickerModal } from "./ProductPickerModal";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface OrderFormModalProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ export function OrderFormModal({
   customers,
   products,
 }: OrderFormModalProps) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   const activeInitial = initialOrder || initialData;

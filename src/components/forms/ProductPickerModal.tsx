@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Search, X, Package, Check, ArrowUpDown } from "lucide-react";
 import { Product } from "@/types/helios";
 import { safeCurrency, safeString, safeNumber, SortDirection, sortData } from "@/lib/table-utils";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface ProductPickerModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export function ProductPickerModal({
   onSelectProduct,
   products,
 }: ProductPickerModalProps) {
+  useEscapeKey(onClose, isOpen);
+
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");

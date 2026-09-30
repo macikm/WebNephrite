@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, CheckSquare, Save, AlertCircle, Clock, User, Briefcase } from "lucide-react";
 import { JobTask, JobOrder } from "@/types/helios";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface TaskFormModalProps {
   isOpen: boolean;
@@ -21,6 +22,8 @@ export function TaskFormModal({
   initialData,
   jobOrders = [],
 }: TaskFormModalProps) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   const activeInitial = initialTask || initialData;

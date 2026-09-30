@@ -27,6 +27,7 @@ import {
   safeString,
   safeCurrency 
 } from "@/lib/table-utils";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface CustomersViewProps {
   customers: Customer[];
@@ -47,6 +48,11 @@ export function CustomersView({
   const [search, setSearch] = useState("");
   const [selectedContact, setSelectedContact] = useState<ContactPerson | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  useEscapeKey(() => {
+    if (selectedCustomer) setSelectedCustomer(null);
+    else if (selectedContact) setSelectedContact(null);
+  }, Boolean(selectedCustomer || selectedContact));
 
   // Form modal states
   const [isCustomerFormOpen, setIsCustomerFormOpen] = useState(false);

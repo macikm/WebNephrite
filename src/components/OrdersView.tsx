@@ -19,6 +19,7 @@ import { Pagination } from "./Pagination";
 import { OrderFormModal } from "./forms/OrderFormModal";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SortDirection, sortData, safeString, safeNumber, safeDate, safeCurrency } from "@/lib/table-utils";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface OrdersViewProps {
   ordersReceived: Order[];
@@ -40,6 +41,10 @@ export function OrdersView({
   const [subType, setSubType] = useState<"received" | "issued">("received");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  useEscapeKey(() => {
+    if (selectedOrder) setSelectedOrder(null);
+  }, Boolean(selectedOrder));
   const [selectedRowId, setSelectedRowId] = useState<number | string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
 

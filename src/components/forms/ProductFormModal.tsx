@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, Package, Save, AlertCircle, Barcode, DollarSign } from "lucide-react";
 import { Product } from "@/types/helios";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ export function ProductFormModal({
   initialProduct,
   initialData,
 }: ProductFormModalProps) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   const activeInitial = initialProduct || initialData;
