@@ -13,7 +13,9 @@ import {
   Calendar, 
   HardDrive,
   Plus,
-  Edit3
+  Edit3,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
 import { Pagination } from "./Pagination";
@@ -31,6 +33,7 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
   const [search, setSearch] = useState("");
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [isViewerMaximized, setIsViewerMaximized] = useState(false);
 
   // Form modal states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -333,25 +336,37 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
               if (e.target === e.currentTarget) setSelectedDoc(null);
             }}
           >
-            <div className="modal-dialog animate-fade-in" style={{ maxWidth: "850px", padding: "1.75rem" }}>
+            <div 
+              className="modal-dialog animate-fade-in" 
+              style={{ 
+                maxWidth: isViewerMaximized ? "97vw" : "860px", 
+                width: isViewerMaximized ? "97vw" : "100%",
+                height: isViewerMaximized ? "94vh" : "auto",
+                maxHeight: isViewerMaximized ? "94vh" : "90vh",
+                display: "flex",
+                flexDirection: "column",
+                padding: "1.25rem",
+                transition: "all 0.2s ease-in-out"
+              }}
+            >
               {/* Modal Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                   <div style={{
-                    width: "42px",
-                    height: "42px",
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(16, 185, 129, 0.25))",
-                    border: "1px solid rgba(6, 182, 212, 0.4)",
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "6px",
+                    background: "#e0f2fe",
+                    border: "1px solid #bae6fd",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: "var(--accent-cyan)",
+                    color: "#0284c7",
                   }}>
                     <FolderArchive size={20} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: "1.25rem", fontWeight: 800 }}>
+                    <h2 style={{ fontSize: "1.2rem", fontWeight: 800 }}>
                       {safeString(selectedDoc.name, "Prohlížeč dokumentu")}
                     </h2>
                     <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "flex", gap: "0.75rem" }}>
@@ -371,7 +386,7 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
                       setIsFormOpen(true);
                     }}
                     className="btn btn-primary"
-                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                    style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem", gap: "0.35rem" }}
                   >
                     <Edit3 size={14} />
                     <span>Upravit</span>
@@ -380,14 +395,35 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
                     <button
                       onClick={() => handleDownload(selectedDoc)}
                       className="btn btn-secondary"
-                      style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}
+                      style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
                     >
                       <Download size={14} />
                       <span>Stáhnout</span>
                     </button>
                   )}
                   <button
-                    onClick={() => setSelectedDoc(null)}
+                    onClick={() => setIsViewerMaximized(!isViewerMaximized)}
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "6px",
+                      background: isViewerMaximized ? "#e0f2fe" : "#ffffff",
+                      border: isViewerMaximized ? "1px solid #bae6fd" : "1px solid #cbd5e1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: isViewerMaximized ? "#0284c7" : "#64748b",
+                      cursor: "pointer",
+                    }}
+                    title={isViewerMaximized ? "Zmenšit okno" : "Maximalizovat prohlížeč"}
+                  >
+                    {isViewerMaximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedDoc(null);
+                      setIsViewerMaximized(false);
+                    }}
                     style={{
                       width: "30px",
                       height: "30px",
@@ -408,7 +444,7 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
               </div>
 
               {/* Integrated Viewer Body */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem", flex: 1, minHeight: 0 }}>
                 {isLoadingContent ? (
                   <div style={{
                     padding: "4rem 1.5rem",
@@ -433,7 +469,9 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
                       overflow: "hidden",
                       border: "1px solid var(--border-subtle)",
                       background: "#1e293b",
-                      height: "600px",
+                      flex: 1,
+                      minHeight: isViewerMaximized ? "calc(94vh - 140px)" : "600px",
+                      height: isViewerMaximized ? "calc(94vh - 140px)" : "600px",
                     }}>
                       <iframe
                         src={`data:application/pdf;base64,${selectedDoc.fileContent}`}
@@ -450,13 +488,14 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
                       padding: "1rem",
                       borderRadius: "var(--radius-md)",
                       border: "1px solid var(--border-subtle)",
-                      maxHeight: "600px",
+                      flex: 1,
                       overflow: "auto",
+                      maxHeight: isViewerMaximized ? "calc(94vh - 140px)" : "600px",
                     }}>
                       <img
                         src={`data:image/jpeg;base64,${selectedDoc.fileContent}`}
                         alt={selectedDoc.name}
-                        style={{ maxWidth: "100%", maxHeight: "560px", objectFit: "contain", borderRadius: "4px" }}
+                        style={{ maxWidth: "100%", maxHeight: isViewerMaximized ? "calc(94vh - 160px)" : "560px", objectFit: "contain", borderRadius: "4px" }}
                       />
                     </div>
                   ) : (

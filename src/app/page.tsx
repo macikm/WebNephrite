@@ -489,6 +489,7 @@ export default function HomePage() {
                 tasks={tasks}
                 isLoading={isLoadingData}
                 customers={customers}
+                products={products}
                 onSaveJob={handleSaveJob}
                 onSaveTask={handleSaveTask}
               />
@@ -507,7 +508,7 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* ASOL Footer matching Screenshot 2, 3, 4 */}
+          {/* Footer */}
           <footer style={{
             marginTop: "1.5rem",
             paddingTop: "0.85rem",
@@ -520,7 +521,7 @@ export default function HomePage() {
             flexWrap: "wrap",
             gap: "0.5rem",
           }}>
-            <div>© 2026 - Asseco Solutions, a.s.</div>
+            <div>© 2026 WebNephrite | Helios Client</div>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "#94a3b8" }}>
               Debug režim: Aktivní Zařízení: Desktop Platforma: Win32 | Verze: 48.2.3.0 Helios: open.helios.eu | Profil: <strong style={{ color: "#0284c7" }}>{userInfo?.dbprofile || "Demo"}</strong> | Uživatel: <strong style={{ color: "#334155" }}>{userInfo?.userName || "Martin Macko"}</strong>
             </div>

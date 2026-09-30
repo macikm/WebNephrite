@@ -58,7 +58,7 @@ export function Sidebar({ currentTab, onSelectTab, dbProfile = "Demo" }: Sidebar
       zIndex: 10,
       boxShadow: "1px 0 3px rgba(0, 0, 0, 0.03)",
     }}>
-      {/* Brand logo in Asseco style with Home button */}
+      {/* WebNephrite brand header with Home button */}
       <div style={{
         padding: "1rem 1.15rem",
         borderBottom: "1px solid #e2e8f0",
@@ -67,7 +67,7 @@ export function Sidebar({ currentTab, onSelectTab, dbProfile = "Demo" }: Sidebar
         gap: "0.75rem",
         background: "#ffffff",
       }}>
-        {/* Blue Home Icon Button matching ASOL portal header */}
+        {/* Blue Home Icon Button */}
         <button
           onClick={() => onSelectTab("dashboard")}
           title="Přejít na Dashboard"
@@ -96,17 +96,14 @@ export function Sidebar({ currentTab, onSelectTab, dbProfile = "Demo" }: Sidebar
         </button>
 
         <div>
-          {/* Asseco wordmark style */}
+          {/* WebNephrite wordmark */}
           <div style={{ display: "flex", alignItems: "baseline", gap: "2px" }}>
-            <span style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.03em", color: "#1e293b", fontFamily: "sans-serif" }}>
-              asseco
-            </span>
-            <span style={{ fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.08em", color: "#0284c7", textTransform: "uppercase", marginLeft: "4px" }}>
-              SOLUTIONS
+            <span style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#0284c7", fontFamily: "sans-serif" }}>
+              WebNephrite
             </span>
           </div>
           <div style={{ fontSize: "0.7rem", color: "#64748b", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-            <span>Helios ERP</span>
+            <span>Helios Client</span>
             <span>•</span>
             <span style={{ color: "#0284c7", fontWeight: 600 }}>{dbProfile}</span>
           </div>

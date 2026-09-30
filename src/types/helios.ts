@@ -179,6 +179,18 @@ export interface ContactPerson {
   note?: string;
 }
 
+export interface JobOrderItem {
+  id?: number;
+  productId?: number;
+  code?: string;
+  name?: string;
+  quantity?: number;
+  measureUnit?: string;
+  unitPrice?: number;
+  totalPrice?: number;
+  note?: string;
+}
+
 export interface JobOrder {
   id: number;
   number: string;
@@ -192,6 +204,7 @@ export interface JobOrder {
   endDate?: string;
   budget?: number;
   note?: string;
+  items?: JobOrderItem[];
 }
 
 export interface JobTask {

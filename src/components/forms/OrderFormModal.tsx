@@ -43,9 +43,6 @@ export function OrderFormModal({
   const activeInitial = initialOrder || initialData;
   const isEdit = Boolean(activeInitial);
 
-  // Tabs
-  const [activeTab, setActiveTab] = useState<"header" | "items" | "other">("header");
-
   const [subType, setSubType] = useState<"received" | "issued">(defaultSubType);
   const [orderNumber, setOrderNumber] = useState(
     activeInitial?.orderNumber || activeInitial?.number || `OBJ${new Date().getFullYear()}${String(Math.floor(Math.random() * 900) + 100)}`
@@ -178,9 +175,9 @@ export function OrderFormModal({
       const copy = [...prev];
       const item = { ...copy[index], [field]: val };
       if (field === "quantity" || field === "unitPrice") {
-        const q = field === "quantity" ? Number(val) : Number(item.quantity || 0);
-        const p = field === "unitPrice" ? Number(val) : Number(item.unitPrice || 0);
-        item.totalPrice = Math.round(q * p * 100) / 100;
+        const qty = field === "quantity" ? Number(val) : Number(item.quantity || 1);
+        const price = field === "unitPrice" ? Number(val) : Number(item.unitPrice || 0);
+        item.totalPrice = qty * price;
       }
       copy[index] = item;
       return copy;
@@ -193,7 +190,6 @@ export function OrderFormModal({
     if (e) e.preventDefault();
     if (items.length === 0) {
       setErrorMessage("Objednávka musí obsahovat alespoň jednu položku.");
-      setActiveTab("items");
       return;
     }
 
@@ -267,9 +263,9 @@ export function OrderFormModal({
     >
       <div 
         className="modal-dialog animate-fade-in" 
-        style={{ maxWidth: "1050px", padding: "1.5rem" }}
+        style={{ maxWidth: "1080px", padding: "1.5rem" }}
       >
-        {/* ASOL Breadcrumbs */}
+        {/* Breadcrumbs */}
         <div className="asol-breadcrumb" style={{ margin: "0 0 1rem 0" }}>
           <span className="link">Dashboard</span>
           <span className="separator">/</span>
@@ -297,6 +293,7 @@ export function OrderFormModal({
               onClick={() => handleSubmit(undefined, false)}
               disabled={isSubmitting}
               className="asol-btn-save"
+              title="Uložit objednávku"
             >
               <Save size={15} />
               <span>{isSubmitting ? "Ukládám..." : "Uložit"}</span>
@@ -307,6 +304,7 @@ export function OrderFormModal({
               onClick={() => handleSubmit(undefined, true)}
               disabled={isSubmitting}
               className="asol-btn-save"
+              title="Uložit a zavřít"
             >
               <CornerUpLeft size={15} />
               <span>Uložit a zpět</span>
@@ -317,6 +315,7 @@ export function OrderFormModal({
               onClick={onClose}
               disabled={isSubmitting}
               className="asol-btn-back"
+              title="Zavřít formulář"
             >
               <X size={15} />
               <span>Zpět</span>
@@ -331,33 +330,8 @@ export function OrderFormModal({
             borderRadius: "4px",
             border: "1px solid #cbd5e1",
           }}>
-            Stav: <strong style={{ color: "#0284c7" }}>{isEdit ? "Rozpracováno" : "Nová objednávka"}</strong>
+            Doklad: <strong style={{ color: "#0284c7" }}>{orderNumber}</strong> ({subType === "received" ? "Objednávka přijatá" : "Objednávka vydaná"})
           </div>
-        </div>
-
-        {/* ASOL Navigation Tabs */}
-        <div className="asol-tabs">
-          <button
-            type="button"
-            onClick={() => setActiveTab("header")}
-            className={`asol-tab ${activeTab === "header" ? "active" : ""}`}
-          >
-            Hlavička
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("items")}
-            className={`asol-tab ${activeTab === "items" ? "active" : ""}`}
-          >
-            Položky objednávky ({items.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("other")}
-            className={`asol-tab ${activeTab === "other" ? "active" : ""}`}
-          >
-            Ostatní
-          </button>
         </div>
 
         {errorMessage && (
@@ -378,8 +352,10 @@ export function OrderFormModal({
           </div>
         )}
 
-        {/* Tab 1: HLAVIČKA */}
-        {activeTab === "header" && (
+        {/* Unified Form - Header and Items on the same page */}
+        <form onSubmit={(e) => handleSubmit(e, true)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          
+          {/* SECTION 1: HLAVIČKA OBJEDNÁVKY */}
           <div style={{
             background: "#ffffff",
             border: "1px solid #cbd5e1",
@@ -389,6 +365,11 @@ export function OrderFormModal({
             flexDirection: "column",
             gap: "1rem",
           }}>
+            <div style={{ fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", color: "#0284c7", letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <ShoppingCart size={15} />
+              <span>Hlavička objednávky</span>
+            </div>
+
             <div className="form-grid-3">
               <div>
                 <label className="label-control">Typ objednávky</label>
@@ -494,21 +475,28 @@ export function OrderFormModal({
               </div>
 
               <div>
-                <label className="label-control">Celková částka</label>
+                <label className="label-control">Celková hodnota dokladu</label>
                 <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0284c7", padding: "0.4rem 0" }}>
                   {safeCurrency(grandTotal)}
                 </div>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Tab 2: POLOŽKY OBJEDNÁVKY */}
-        {activeTab === "items" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          {/* SECTION 2: POLOŽKY OBJEDNÁVKY */}
+          <div style={{
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            borderRadius: "6px",
+            padding: "1.25rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+          }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-              <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155" }}>
-                Položky objednávky ({items.length})
+              <div style={{ fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", color: "#0284c7", letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <Package size={15} />
+                <span>Položky objednávky ({items.length})</span>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -561,7 +549,7 @@ export function OrderFormModal({
                 <tbody>
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#64748b" }}>
+                      <td colSpan={8} style={{ textAlign: "center", padding: "2rem 1rem", color: "#64748b" }}>
                         Objednávka zatím neobsahuje žádné položky. Klikněte na <strong>Vybrat ze skladu / ceníku</strong> nebo <strong>Přidat volný řádek</strong>.
                       </td>
                     </tr>
@@ -671,74 +659,72 @@ export function OrderFormModal({
               </div>
             </div>
           </div>
-        )}
 
-        {/* Tab 3: OSTATNÍ */}
-        {activeTab === "other" && (
+          {/* SECTION 3: POZNÁMKA A SPECIFIKACE */}
           <div style={{
             background: "#ffffff",
             border: "1px solid #cbd5e1",
             borderRadius: "6px",
             padding: "1.25rem",
           }}>
-            <label className="label-control">Poznámka k objednávce</label>
+            <label className="label-control">Poznámka k objednávce / dodací podmínky</label>
             <textarea
               className="input-control"
-              rows={4}
+              rows={3}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Doplňující specifikace, dodací podmínky, interní instrukce..."
             />
           </div>
-        )}
 
-        {/* Bottom Actions Bar */}
-        <div style={{
-          marginTop: "1.25rem",
-          paddingTop: "1rem",
-          borderTop: "1px solid #e2e8f0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <button
-              type="button"
-              onClick={() => handleSubmit(undefined, false)}
-              disabled={isSubmitting}
-              className="asol-btn-save"
-            >
-              <Save size={15} />
-              <span>{isSubmitting ? "Ukládám..." : "Uložit"}</span>
-            </button>
+          {/* Bottom Actions Bar */}
+          <div style={{
+            marginTop: "0.5rem",
+            paddingTop: "1rem",
+            borderTop: "1px solid #e2e8f0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={() => handleSubmit(undefined, false)}
+                disabled={isSubmitting}
+                className="asol-btn-save"
+              >
+                <Save size={15} />
+                <span>{isSubmitting ? "Ukládám..." : "Uložit"}</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleSubmit(undefined, true)}
-              disabled={isSubmitting}
-              className="asol-btn-save"
-            >
-              <CornerUpLeft size={15} />
-              <span>Uložit a zpět</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleSubmit(undefined, true)}
+                disabled={isSubmitting}
+                className="asol-btn-save"
+              >
+                <CornerUpLeft size={15} />
+                <span>Uložit a zpět</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="asol-btn-back"
-            >
-              <X size={15} />
-              <span>Zpět</span>
-            </button>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="asol-btn-back"
+              >
+                <X size={15} />
+                <span>Zpět</span>
+              </button>
+            </div>
+
+            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+              WebNephrite • Objednávky Helios Nephrite
+            </div>
           </div>
-
-          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-            © 2026 - Asseco Solutions, a.s. | Helios Nephrite API
-          </div>
-        </div>
+        </form>
 
         <ProductPickerModal
           isOpen={isProductPickerOpen}

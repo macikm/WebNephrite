@@ -14,10 +14,7 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
-  CornerUpLeft,
-  MessageSquare,
-  Search,
-  UserCheck
+  CornerUpLeft
 } from "lucide-react";
 import { Invoice, InvoiceItem, Customer, Product } from "@/types/helios";
 import { safeCurrency, safeNumber } from "@/lib/table-utils";
@@ -48,9 +45,6 @@ export function InvoiceFormModal({
 
   const activeInitial = initialInvoice || initialData;
   const isEdit = Boolean(activeInitial);
-
-  // Active Tab
-  const [activeTab, setActiveTab] = useState<"header" | "items" | "other">("header");
 
   // Form State
   const [docType, setDocType] = useState<"issued" | "received">(
@@ -241,7 +235,6 @@ export function InvoiceFormModal({
     if (e) e.preventDefault();
     if (calculatedItems.length === 0) {
       setErrorMessage("Faktura musí obsahovat alespoň jednu položku.");
-      setActiveTab("items");
       return;
     }
 
@@ -325,9 +318,9 @@ export function InvoiceFormModal({
     >
       <div 
         className="modal-dialog animate-fade-in" 
-        style={{ maxWidth: "1080px", padding: "1.5rem" }}
+        style={{ maxWidth: "1120px", padding: "1.5rem" }}
       >
-        {/* ASOL Breadcrumbs matching Screenshot 3 & 4 */}
+        {/* Breadcrumbs */}
         <div className="asol-breadcrumb" style={{ margin: "0 0 1rem 0" }}>
           <span className="link">Dashboard</span>
           <span className="separator">/</span>
@@ -338,7 +331,7 @@ export function InvoiceFormModal({
           <span className="current">{invoiceNo}:</span>
         </div>
 
-        {/* Top Action Toolbar matching Screenshot 3 & 4 */}
+        {/* Top Action Toolbar */}
         <div style={{
           display: "flex",
           justifyContent: "space-between",
@@ -349,9 +342,7 @@ export function InvoiceFormModal({
           paddingBottom: "0.75rem",
           borderBottom: "1px solid #e2e8f0",
         }}>
-          {/* Action buttons on left */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-            {/* Green Save */}
             <button
               type="button"
               onClick={() => handleSubmit(undefined, false)}
@@ -363,19 +354,17 @@ export function InvoiceFormModal({
               <span>{isSubmitting ? "Ukládám..." : "Uložit"}</span>
             </button>
 
-            {/* Green Save & Back */}
             <button
               type="button"
               onClick={() => handleSubmit(undefined, true)}
               disabled={isSubmitting}
               className="asol-btn-save"
-              title="Uložit a vrátit se do přehledu faktur"
+              title="Uložit a vrátit se do přehledu"
             >
               <CornerUpLeft size={15} />
               <span>Uložit a zpět</span>
             </button>
 
-            {/* Red Back / Cancel */}
             <button
               type="button"
               onClick={onClose}
@@ -386,20 +375,8 @@ export function InvoiceFormModal({
               <X size={15} />
               <span>Zpět</span>
             </button>
-
-            {/* Blue Add Comment / Note */}
-            <button
-              type="button"
-              onClick={() => setActiveTab("other")}
-              className="asol-btn-action"
-              title="Přejít na poznámky a doplňující údaje"
-            >
-              <MessageSquare size={15} />
-              <span>Přidat komentář</span>
-            </button>
           </div>
 
-          {/* Document State Tag */}
           <div style={{
             fontSize: "0.8rem",
             color: "#64748b",
@@ -408,33 +385,8 @@ export function InvoiceFormModal({
             borderRadius: "4px",
             border: "1px solid #cbd5e1",
           }}>
-            Stav: <strong style={{ color: "#0284c7" }}>{isEdit ? "Rozpracováno" : "Nový doklad"}</strong>
+            Doklad: <strong style={{ color: "#0284c7" }}>{invoiceNo}</strong> ({docType === "issued" ? "Vydaná faktura" : "Přijatá faktura"})
           </div>
-        </div>
-
-        {/* ASOL Navigation Tabs matching Screenshot 4 */}
-        <div className="asol-tabs">
-          <button
-            type="button"
-            onClick={() => setActiveTab("header")}
-            className={`asol-tab ${activeTab === "header" ? "active" : ""}`}
-          >
-            Hlavička
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("items")}
-            className={`asol-tab ${activeTab === "items" ? "active" : ""}`}
-          >
-            Položky dokladu ({items.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("other")}
-            className={`asol-tab ${activeTab === "other" ? "active" : ""}`}
-          >
-            Ostatní & Platba
-          </button>
         </div>
 
         {errorMessage && (
@@ -455,185 +407,179 @@ export function InvoiceFormModal({
           </div>
         )}
 
-        {/* Tab 1: HLAVIČKA DOKLADU matching Screenshot 4 */}
-        {activeTab === "header" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div style={{
-              background: "#ffffff",
-              border: "1px solid #cbd5e1",
-              borderRadius: "6px",
-              padding: "1.25rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem",
-            }}>
-              {/* Row 1: Interní číslo, Číslo fak., Stav uhrazenosti */}
-              <div className="form-grid-3">
-                <div>
-                  <label className="label-control">Interní číslo dokladu</label>
-                  <input
-                    type="text"
-                    className="input-control"
-                    style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}
-                    value={invoiceNo}
-                    onChange={(e) => setInvoiceNo(e.target.value)}
-                  />
-                </div>
+        <form onSubmit={(e) => handleSubmit(e, true)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          
+          {/* SECTION 1: HLAVIČKA DOKLADU (Unified on same screen) */}
+          <div style={{
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            borderRadius: "6px",
+            padding: "1.25rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+          }}>
+            <div style={{ fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", color: "#0284c7", letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <FileText size={15} />
+              <span>Hlavička faktury</span>
+            </div>
 
-                <div>
-                  <label className="label-control">Číslo fak. (Variabilní symbol) *</label>
-                  <input
-                    type="text"
-                    required
-                    className="input-control"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                    value={variableSymbol}
-                    onChange={(e) => setVariableSymbol(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="label-control">Stav uhrazenosti</label>
-                  <select
-                    className="input-control"
-                    value={activeInitial?.invPaymentStatusCode || "unpaid"}
-                    disabled
-                  >
-                    <option value="unpaid">Neuhrazeno</option>
-                    <option value="paid">Uhrazeno</option>
-                  </select>
-                </div>
+            {/* Row 1: Typ faktury, Číslo, VS, KS */}
+            <div className="form-grid-4">
+              <div>
+                <label className="label-control">Typ faktury</label>
+                <select
+                  className="input-control"
+                  value={docType}
+                  onChange={(e) => setDocType(e.target.value as "issued" | "received")}
+                >
+                  <option value="issued">Faktura vydaná (odběratel)</option>
+                  <option value="received">Faktura přijatá (dodavatel)</option>
+                </select>
               </div>
 
-              {/* Row 2: Odběratel, Expozitura, IČO */}
-              <div className="form-grid-3">
-                <div>
-                  <label className="label-control">Odběratel (Výběr z číselníku)</label>
-                  <select
-                    className="input-control"
-                    value={selectedCustomerId}
-                    onChange={(e) => handleCustomerSelect(e.target.value)}
-                  >
-                    <option value="">— Vyberte partnera ze systému —</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} {c.tin ? `(${c.tin})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="label-control">Obchodní název partnera *</label>
-                  <input
-                    type="text"
-                    required
-                    className="input-control"
-                    value={customCustomerName}
-                    onChange={(e) => setCustomCustomerName(e.target.value)}
-                    placeholder="Název firmy nebo jméno..."
-                  />
-                </div>
-
-                <div>
-                  <label className="label-control">IČO / DIČ</label>
-                  <input
-                    type="text"
-                    className="input-control"
-                    value={customerTin}
-                    onChange={(e) => setCustomerTin(e.target.value)}
-                    placeholder="např. 12345678"
-                  />
-                </div>
+              <div>
+                <label className="label-control">Číslo dokladu *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-control"
+                  style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}
+                  value={invoiceNo}
+                  onChange={(e) => setInvoiceNo(e.target.value)}
+                />
               </div>
 
-              {/* Row 3: Vystaveno, DUZP, Splatno, Typ úhrady */}
-              <div className="form-grid-4">
-                <div>
-                  <label className="label-control">Vystaveno</label>
-                  <input
-                    type="date"
-                    className="input-control"
-                    value={issueDate}
-                    onChange={(e) => setIssueDate(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="label-control">DUZP</label>
-                  <input
-                    type="date"
-                    className="input-control"
-                    value={vatDate}
-                    onChange={(e) => setVatDate(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="label-control">Splatno</label>
-                  <input
-                    type="date"
-                    className="input-control"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="label-control">Způsob úhrady</label>
-                  <select
-                    className="input-control"
-                    value={paymentType}
-                    onChange={(e) => setPaymentType(e.target.value)}
-                  >
-                    <option value="Bankovní převod">Bankovní převod</option>
-                    <option value="Platební příkaz">Platební příkaz</option>
-                    <option value="Hotovost">Hotovost</option>
-                    <option value="Platební karta">Platební karta</option>
-                    <option value="Zápočet">Zápočet</option>
-                  </select>
-                </div>
+              <div>
+                <label className="label-control">Variabilní symbol *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-control"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                  value={variableSymbol}
+                  onChange={(e) => setVariableSymbol(e.target.value)}
+                />
               </div>
 
-              {/* Row 4: Finanční rekapitulace dokladu */}
-              <div className="form-grid-4" style={{ background: "#f8fafc", padding: "0.85rem", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
-                <div>
-                  <label className="label-control">Cena celkem</label>
-                  <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0284c7" }}>
-                    {safeCurrency(grandTotal)}
-                  </div>
-                </div>
+              <div>
+                <label className="label-control">Konstantní symbol</label>
+                <input
+                  type="text"
+                  className="input-control"
+                  value={constantSymbol}
+                  onChange={(e) => setConstantSymbol(e.target.value)}
+                />
+              </div>
+            </div>
 
-                <div>
-                  <label className="label-control">Záloha</label>
-                  <div style={{ fontSize: "1rem", color: "#64748b" }}>0,00 Kč</div>
-                </div>
+            {/* Row 2: Odběratel, Obchodní název, IČO */}
+            <div className="form-grid-3">
+              <div>
+                <label className="label-control">Výběr partnera z adresáře</label>
+                <select
+                  className="input-control"
+                  value={selectedCustomerId}
+                  onChange={(e) => handleCustomerSelect(e.target.value)}
+                >
+                  <option value="">— Vyberte partnera ze systému —</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.tin ? `(${c.tin})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                <div>
-                  <label className="label-control">Uhrazeno</label>
-                  <div style={{ fontSize: "1rem", color: "#16a34a", fontWeight: 600 }}>
-                    {activeInitial?.invPaymentStatusCode === "paid" ? safeCurrency(grandTotal) : "0,00 Kč"}
-                  </div>
-                </div>
+              <div>
+                <label className="label-control">Obchodní název partnera *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-control"
+                  value={customCustomerName}
+                  onChange={(e) => setCustomCustomerName(e.target.value)}
+                  placeholder="Název firmy nebo jméno..."
+                />
+              </div>
 
-                <div>
-                  <label className="label-control">Zbývá uhradit</label>
-                  <div style={{ fontSize: "1.15rem", fontWeight: 800, color: grandTotal > 0 ? "#dc2626" : "#16a34a" }}>
-                    {activeInitial?.invPaymentStatusCode === "paid" ? "0,00 Kč" : safeCurrency(grandTotal)}
-                  </div>
-                </div>
+              <div>
+                <label className="label-control">IČO / DIČ</label>
+                <input
+                  type="text"
+                  className="input-control"
+                  value={customerTin}
+                  onChange={(e) => setCustomerTin(e.target.value)}
+                  placeholder="např. 12345678"
+                />
+              </div>
+            </div>
+
+            {/* Row 3: Termíny a Platba */}
+            <div className="form-grid-4">
+              <div>
+                <label className="label-control">Datum vystavení</label>
+                <input
+                  type="date"
+                  className="input-control"
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="label-control">DUZP</label>
+                <input
+                  type="date"
+                  className="input-control"
+                  value={vatDate}
+                  onChange={(e) => setVatDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="label-control">Datum splatnosti</label>
+                <input
+                  type="date"
+                  className="input-control"
+                  style={{ fontWeight: 600 }}
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="label-control">Způsob úhrady</label>
+                <select
+                  className="input-control"
+                  value={paymentType}
+                  onChange={(e) => setPaymentType(e.target.value)}
+                >
+                  <option value="Bankovní převod">Bankovní převod</option>
+                  <option value="Platební příkaz">Platební příkaz</option>
+                  <option value="Hotovost">Hotovost</option>
+                  <option value="Platební karta">Platební karta</option>
+                  <option value="Zápočet">Zápočet</option>
+                </select>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Tab 2: POLOŽKY DOKLADU matching Screenshot 4 */}
-        {activeTab === "items" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {/* Toolbar for items */}
+          {/* SECTION 2: POLOŽKY DOKLADU (Directly beneath header on the SAME view) */}
+          <div style={{
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            borderRadius: "6px",
+            padding: "1.25rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.85rem",
+          }}>
+            {/* Items Toolbar */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-              <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155" }}>
-                Rozpis položek dokladu ({items.length})
+              <div style={{ fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", color: "#0284c7", letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <Package size={15} />
+                <span>Položky faktury ({items.length})</span>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -670,17 +616,17 @@ export function InvoiceFormModal({
               ))}
             </datalist>
 
-            {/* Items Grid matching Screenshot 4 */}
+            {/* Items Table */}
             <div className="table-wrapper" style={{ maxHeight: "360px", overflowY: "auto" }}>
-              <table className="erp-table" style={{ minWidth: "980px" }}>
+              <table className="erp-table" style={{ minWidth: "960px" }}>
                 <thead>
                   <tr>
                     <th style={{ width: "35px", textAlign: "center" }}>ř.</th>
-                    <th style={{ width: "120px" }}>Č. zboží</th>
+                    <th style={{ width: "115px" }}>Č. zboží</th>
                     <th>Zboží / Popis položky</th>
                     <th style={{ width: "80px" }}>Počet</th>
                     <th style={{ width: "65px" }}>MJ</th>
-                    <th style={{ width: "95px" }}>Kód DPH</th>
+                    <th style={{ width: "85px" }}>Kód DPH</th>
                     <th style={{ width: "105px" }}>Sazba DPH</th>
                     <th style={{ width: "120px", textAlign: "right" }}>Cena/j bez DPH</th>
                     <th style={{ width: "115px", textAlign: "right" }}>Cena základ</th>
@@ -698,17 +644,12 @@ export function InvoiceFormModal({
                   ) : (
                     calculatedItems.map((item, idx) => (
                       <tr key={item.id || idx}>
-                        {/* ř. (Row index) */}
                         <td style={{ textAlign: "center", color: "#64748b", fontWeight: 600 }}>
                           {idx + 1}
                         </td>
-
-                        {/* Č. zboží */}
                         <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
                           {item.productId ? `FN${String(item.productId).padStart(5, "0")}` : "—"}
                         </td>
-
-                        {/* Zboží (Input + Autocomplete + [...] Button) */}
                         <td>
                           <div style={{ display: "flex", gap: "0.25rem", alignItems: "center" }}>
                             <input
@@ -735,8 +676,6 @@ export function InvoiceFormModal({
                             </button>
                           </div>
                         </td>
-
-                        {/* Počet */}
                         <td>
                           <input
                             type="number"
@@ -748,8 +687,6 @@ export function InvoiceFormModal({
                             onChange={(e) => handleUpdateItem(idx, "quantity", parseFloat(e.target.value) || 0)}
                           />
                         </td>
-
-                        {/* MJ */}
                         <td>
                           <input
                             type="text"
@@ -759,15 +696,11 @@ export function InvoiceFormModal({
                             onChange={(e) => handleUpdateItem(idx, "measureUnit", e.target.value)}
                           />
                         </td>
-
-                        {/* Kód DPH */}
                         <td style={{ textAlign: "center" }}>
                           <span style={{ fontSize: "0.775rem", color: "#64748b", fontFamily: "var(--font-mono)" }}>
                             {item.vatRate === 21 ? "210" : item.vatRate === 12 ? "120" : item.vatRate === 15 ? "150" : item.vatRate === 10 ? "100" : "000"}
                           </span>
                         </td>
-
-                        {/* Sazba DPH */}
                         <td>
                           <select
                             className="input-control"
@@ -782,8 +715,6 @@ export function InvoiceFormModal({
                             <option value={0}>0 %</option>
                           </select>
                         </td>
-
-                        {/* Cena/j bez DPH */}
                         <td style={{ textAlign: "right" }}>
                           <input
                             type="number"
@@ -794,18 +725,12 @@ export function InvoiceFormModal({
                             onChange={(e) => handleUpdateItem(idx, "unitPrice", parseFloat(e.target.value) || 0)}
                           />
                         </td>
-
-                        {/* Cena základ */}
                         <td style={{ textAlign: "right", fontWeight: 600 }}>
                           {safeCurrency(item.base)}
                         </td>
-
-                        {/* Cena celkem */}
                         <td style={{ textAlign: "right", fontWeight: 700, color: "#0284c7" }}>
                           {safeCurrency(item.total)}
                         </td>
-
-                        {/* Remove button */}
                         <td style={{ textAlign: "center" }}>
                           <button
                             type="button"
@@ -824,7 +749,7 @@ export function InvoiceFormModal({
               </table>
             </div>
 
-            {/* Rekapitulace DPH Card */}
+            {/* Rekapitulace DPH a Souhrn */}
             <div style={{
               background: "#f8fafc",
               border: "1px solid #cbd5e1",
@@ -840,7 +765,7 @@ export function InvoiceFormModal({
                 <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "0.35rem" }}>
                   Rekapitulace DPH
                 </div>
-                <div style={{ display: "flex", gap: "1.25rem", fontSize: "0.8rem", color: "#334155" }}>
+                <div style={{ display: "flex", gap: "1rem", fontSize: "0.8rem", color: "#334155", flexWrap: "wrap" }}>
                   {Object.entries(vatBreakdown).map(([rate, vals]) => (
                     <div key={rate} style={{ padding: "0.25rem 0.6rem", background: "#ffffff", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
                       <span>Sazba {rate} %: </span>
@@ -855,124 +780,104 @@ export function InvoiceFormModal({
                 <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
                   Základ: <strong>{safeCurrency(totalBase)}</strong> • DPH: <strong>{safeCurrency(totalVat)}</strong>
                 </div>
-                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#0284c7", marginTop: "0.2rem" }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#0284c7", marginTop: "0.2rem" }}>
                   Celkem k úhradě: {safeCurrency(grandTotal)}
                 </div>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Tab 3: OSTATNÍ & PLATBA matching Screenshot 4 */}
-        {activeTab === "other" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div style={{
-              background: "#ffffff",
-              border: "1px solid #cbd5e1",
-              borderRadius: "6px",
-              padding: "1.25rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem",
-            }}>
-              <div className="form-grid-3">
-                <div>
-                  <label className="label-control">Konstantní symbol</label>
-                  <input
-                    type="text"
-                    className="input-control"
-                    value={constantSymbol}
-                    onChange={(e) => setConstantSymbol(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="label-control">Měna dokladu</label>
-                  <select
-                    className="input-control"
-                    value={currencyCode}
-                    onChange={(e) => setCurrencyCode(e.target.value)}
-                  >
-                    <option value="CZK">CZK - Česká koruna</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="USD">USD - US Dolar</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="label-control">Bankovní spojení vlastní</label>
-                  <input
-                    type="text"
-                    className="input-control"
-                    defaultValue="111263671/0300"
-                    placeholder="Číslo účtu / kód banky"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="label-control">Poznámka k faktuře (bude uvedena na tištěném dokladu)</label>
-                <textarea
+          {/* SECTION 3: POZNÁMKA & BANKOVNÍ SPOJENÍ */}
+          <div style={{
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            borderRadius: "6px",
+            padding: "1.25rem",
+            display: "grid",
+            gridTemplateColumns: "1fr 2fr",
+            gap: "1rem",
+          }}>
+            <div>
+              <label className="label-control">Měna a Bankovní spojení</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <select
                   className="input-control"
-                  rows={3}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Děkujeme za spolupráci. Splatnost dle smlouvy..."
+                  value={currencyCode}
+                  onChange={(e) => setCurrencyCode(e.target.value)}
+                >
+                  <option value="CZK">CZK - Česká koruna</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="USD">USD - US Dolar</option>
+                </select>
+                <input
+                  type="text"
+                  className="input-control"
+                  defaultValue="111263671/0300"
+                  placeholder="Vlastní bankovní účet"
                 />
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Bottom Actions Bar matching Screenshot 3 & 4 */}
-        <div style={{
-          marginTop: "1.25rem",
-          paddingTop: "1rem",
-          borderTop: "1px solid #e2e8f0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <button
-              type="button"
-              onClick={() => handleSubmit(undefined, false)}
-              disabled={isSubmitting}
-              className="asol-btn-save"
-            >
-              <Save size={15} />
-              <span>{isSubmitting ? "Ukládám..." : "Uložit"}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSubmit(undefined, true)}
-              disabled={isSubmitting}
-              className="asol-btn-save"
-            >
-              <CornerUpLeft size={15} />
-              <span>Uložit a zpět</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="asol-btn-back"
-            >
-              <X size={15} />
-              <span>Zpět</span>
-            </button>
+            <div>
+              <label className="label-control">Poznámka k faktuře (uvedena na dokladu)</label>
+              <textarea
+                className="input-control"
+                rows={3}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Děkujeme za spolupráci. Splatnost faktury dle smlouvy..."
+              />
+            </div>
           </div>
 
-          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-            © 2026 - Asseco Solutions, a.s. | Helios Nephrite API
-          </div>
-        </div>
+          {/* Bottom Actions Bar */}
+          <div style={{
+            paddingTop: "0.5rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={() => handleSubmit(undefined, false)}
+                disabled={isSubmitting}
+                className="asol-btn-save"
+              >
+                <Save size={15} />
+                <span>{isSubmitting ? "Ukládám..." : "Uložit"}</span>
+              </button>
 
-        {/* Dedicated Product Picker Modal */}
+              <button
+                type="button"
+                onClick={() => handleSubmit(undefined, true)}
+                disabled={isSubmitting}
+                className="asol-btn-save"
+              >
+                <CornerUpLeft size={15} />
+                <span>Uložit a zpět</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="asol-btn-back"
+              >
+                <X size={15} />
+                <span>Zpět</span>
+              </button>
+            </div>
+
+            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+              WebNephrite • Helios Nephrite Client
+            </div>
+          </div>
+        </form>
+
+        {/* Product Picker Modal */}
         <ProductPickerModal
           isOpen={isProductPickerOpen}
           onClose={() => setIsProductPickerOpen(false)}

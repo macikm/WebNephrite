@@ -1,20 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { JobOrder, JobTask, Customer } from "@/types/helios";
-import { Search, Briefcase, CheckSquare, Clock, Eye, X, User, Plus, Edit3, ChevronDown, Download } from "lucide-react";
+import { JobOrder, JobTask, Customer, Product } from "@/types/helios";
+import { Search, Briefcase, CheckSquare, Clock, Eye, X, User, Plus, Edit3, ChevronDown, Download, Package } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
 import { Pagination } from "./Pagination";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { JobFormModal } from "./forms/JobFormModal";
 import { TaskFormModal } from "./forms/TaskFormModal";
-import { SortDirection, sortData, safeString, safeNumber, safeDate } from "@/lib/table-utils";
+import { SortDirection, sortData, safeString, safeNumber, safeDate, safeCurrency } from "@/lib/table-utils";
 
 interface JobsViewProps {
   jobOrders: JobOrder[];
   tasks: JobTask[];
   isLoading: boolean;
   customers?: Customer[];
+  products?: Product[];
   onSaveJob?: (job: JobOrder) => void;
   onSaveTask?: (task: JobTask) => void;
 }
@@ -24,6 +25,7 @@ export function JobsView({
   tasks, 
   isLoading,
   customers = [],
+  products = [],
   onSaveJob,
   onSaveTask
 }: JobsViewProps) {
@@ -308,13 +310,22 @@ export function JobsView({
                       sortDirection={sortDirection}
                       onSort={handleSort}
                     />
+                    <th style={{ width: "80px", textAlign: "center" }}>Položek</th>
+                    <SortableHeader
+                      label="Rozpočet"
+                      columnKey="budget"
+                      currentSortKey={sortKey}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      style={{ width: "130px", textAlign: "right" }}
+                    />
                     <SortableHeader
                       label="Zahájení"
                       columnKey="startDate"
                       currentSortKey={sortKey}
                       sortDirection={sortDirection}
                       onSort={handleSort}
-                      style={{ width: "120px" }}
+                      style={{ width: "110px" }}
                     />
                     <SortableHeader
                       label="Termín ukončení"
@@ -322,7 +333,7 @@ export function JobsView({
                       currentSortKey={sortKey}
                       sortDirection={sortDirection}
                       onSort={handleSort}
-                      style={{ width: "120px" }}
+                      style={{ width: "110px" }}
                     />
                     <SortableHeader
                       label="Stav"
@@ -338,19 +349,21 @@ export function JobsView({
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b" }}>
+                      <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b" }}>
                         Načítám zakázky z Heliosu...
                       </td>
                     </tr>
                   ) : sortedJobs.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b" }}>
+                      <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b" }}>
                         Žádné zakázky k zobrazení.
                       </td>
                     </tr>
                   ) : (
                     paginatedJobs.map((j) => {
                       const isSelected = selectedRowId === j.id;
+                      const itemsCount = j.items?.length || 0;
+                      const calculatedBudget = j.budget ?? j.items?.reduce((s, i) => s + (Number(i.totalPrice) || 0), 0) ?? 0;
                       return (
                         <tr 
                           key={j.id}
@@ -367,6 +380,22 @@ export function JobsView({
                           </td>
                           <td style={{ fontWeight: 600 }}>{safeString(j.name)}</td>
                           <td>{safeString(j.customer?.name, "Interní")}</td>
+                          <td style={{ textAlign: "center" }}>
+                            <span style={{
+                              display: "inline-block",
+                              padding: "0.15rem 0.45rem",
+                              borderRadius: "4px",
+                              background: itemsCount > 0 ? "#e0f2fe" : "#f1f5f9",
+                              color: itemsCount > 0 ? "#0284c7" : "#64748b",
+                              fontWeight: 700,
+                              fontSize: "0.75rem",
+                            }}>
+                              {itemsCount}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "right", fontWeight: 700, color: "#0284c7" }}>
+                            {safeCurrency(calculatedBudget)}
+                          </td>
                           <td>{safeDate(j.startDate)}</td>
                           <td>{safeDate(j.endDate)}</td>
                           <td style={{ textAlign: "center" }}>
@@ -558,7 +587,7 @@ export function JobsView({
           >
             <div 
               className="modal-dialog animate-fade-in" 
-              style={{ maxWidth: "700px", padding: "1.75rem" }}
+              style={{ maxWidth: "850px", padding: "1.75rem" }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
                 <div>
@@ -591,14 +620,23 @@ export function JobsView({
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div style={{ padding: "1rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ fontSize: "0.725rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Zadavatel / Klient:</div>
-                  <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "#1e293b", marginTop: "0.2rem" }}>
-                    {safeString(selectedJob.customer?.name, "Interní režie")}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ fontSize: "0.725rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Zadavatel / Klient:</div>
+                    <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "#1e293b", marginTop: "0.2rem" }}>
+                      {safeString(selectedJob.customer?.name, "Interní režie")}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ fontSize: "0.725rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Rozpočet / Hodnota:</div>
+                    <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#0284c7", marginTop: "0.2rem" }}>
+                      {safeCurrency(selectedJob.budget ?? selectedJob.items?.reduce((s, i) => s + (Number(i.totalPrice) || 0), 0) ?? 0)}
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.825rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", fontSize: "0.825rem" }}>
                   <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
                     <div style={{ color: "#64748b", fontSize: "0.725rem" }}>Datum zahájení</div>
                     <div style={{ fontWeight: 600, color: "#1e293b", marginTop: "0.2rem" }}>{safeDate(selectedJob.startDate)}</div>
@@ -607,9 +645,83 @@ export function JobsView({
                     <div style={{ color: "#64748b", fontSize: "0.725rem" }}>Datum ukončení</div>
                     <div style={{ fontWeight: 600, color: "#1e293b", marginTop: "0.2rem" }}>{safeDate(selectedJob.endDate)}</div>
                   </div>
+                  <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontSize: "0.725rem" }}>Stav</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b", marginTop: "0.2rem" }}>{selectedJob.statusCode || "V řešení"}</div>
+                  </div>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
+                {selectedJob.note && (
+                  <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0", fontSize: "0.825rem" }}>
+                    <div style={{ color: "#64748b", fontSize: "0.725rem", fontWeight: 600 }}>Poznámka k zakázce</div>
+                    <div style={{ color: "#334155", marginTop: "0.25rem", whiteSpace: "pre-wrap" }}>{selectedJob.note}</div>
+                  </div>
+                )}
+
+                {/* Line Items Table of the Job (Helios položková třída) */}
+                <div style={{
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    padding: "0.6rem 0.85rem",
+                    background: "#f1f5f9",
+                    borderBottom: "1px solid #cbd5e1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}>
+                    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#334155", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      <Package size={14} color="#0284c7" />
+                      <span>Položky zakázky ({selectedJob.items?.length || 0})</span>
+                    </div>
+                  </div>
+
+                  <div className="table-wrapper" style={{ maxHeight: "240px", overflowY: "auto", border: "none", borderRadius: 0 }}>
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: "35px", textAlign: "center" }}>ř.</th>
+                          <th style={{ width: "100px" }}>Kód</th>
+                          <th>Položka / Činnost</th>
+                          <th style={{ width: "80px", textAlign: "right" }}>Množství</th>
+                          <th style={{ width: "60px", textAlign: "center" }}>MJ</th>
+                          <th style={{ width: "110px", textAlign: "right" }}>Cena / MJ</th>
+                          <th style={{ width: "120px", textAlign: "right" }}>Celkem</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {!selectedJob.items || selectedJob.items.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} style={{ textAlign: "center", padding: "1.5rem", color: "#64748b" }}>
+                              Tato zakázka zatím nemá v systému rozepsané položky.
+                            </td>
+                          </tr>
+                        ) : (
+                          selectedJob.items.map((item, idx) => {
+                            const lineTotal = Number(item.totalPrice) || (Number(item.quantity || 1) * Number(item.unitPrice || 0));
+                            return (
+                              <tr key={item.id || idx}>
+                                <td style={{ textAlign: "center", color: "#64748b", fontWeight: 600 }}>{idx + 1}</td>
+                                <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem" }}>
+                                  {item.code || (item.productId ? `FN${String(item.productId).padStart(5, "0")}` : "—")}
+                                </td>
+                                <td style={{ fontWeight: 500 }}>{item.name}</td>
+                                <td style={{ textAlign: "right" }}>{item.quantity}</td>
+                                <td style={{ textAlign: "center" }}>{item.measureUnit || "hod"}</td>
+                                <td style={{ textAlign: "right" }}>{safeCurrency(item.unitPrice)}</td>
+                                <td style={{ textAlign: "right", fontWeight: 700, color: "#0284c7" }}>{safeCurrency(lineTotal)}</td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.25rem" }}>
                   <button
                     onClick={() => {
                       setEditingJob(selectedJob);
@@ -732,6 +844,7 @@ export function JobsView({
           }}
           initialJob={editingJob}
           customers={customers}
+          products={products}
         />
 
         <TaskFormModal
