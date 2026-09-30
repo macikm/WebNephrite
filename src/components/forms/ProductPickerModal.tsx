@@ -203,13 +203,15 @@ export function ProductPickerModal({
                 sortedProducts.map((p) => {
                   const price = safeNumber(p.price || p.unitPrice, 0);
                   const code = safeString(p.referenceId || `#${p.id}`);
-                  const vatRate = p.vatRate != null ? `${p.vatRate} %` : "21 %";
+                  const resolvedRate = p.vatRate != null ? (p.vatRate === 10 || p.vatRate === 15 ? 21 : p.vatRate) : 21;
+                  const vatRate = `${resolvedRate} %`;
+                  const productToSelect = { ...p, vatRate: resolvedRate };
 
                   return (
                     <tr
                       key={p.id}
                       onDoubleClick={() => {
-                        onSelectProduct(p);
+                        onSelectProduct(productToSelect);
                         onClose();
                       }}
                       style={{ cursor: "pointer" }}

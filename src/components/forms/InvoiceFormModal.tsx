@@ -107,6 +107,15 @@ export function InvoiceFormModal({
     }
   };
 
+  // Helper to normalize VAT rates (legacy 10% and 15% from old database default to current standard 21%)
+  const resolveVatRate = (rate?: number | null): number => {
+    if (rate == null) return 21;
+    const num = Number(rate);
+    if (isNaN(num)) return 21;
+    if (num === 10 || num === 15) return 21;
+    return num;
+  };
+
   // Product Picker Modal State
   const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
   const [pickerTargetRow, setPickerTargetRow] = useState<number | "new">("new");
@@ -118,7 +127,7 @@ export function InvoiceFormModal({
       name: prod.name,
       measureUnit: prod.measureUnit || "ks",
       unitPrice: prod.price || prod.unitPrice || 0,
-      vatRate: prod.vatRate != null ? prod.vatRate : 21,
+      vatRate: resolveVatRate(prod.vatRate),
     };
 
     if (pickerTargetRow === "new") {
@@ -146,7 +155,7 @@ export function InvoiceFormModal({
         name: matched.name,
         measureUnit: matched.measureUnit || items[idx]?.measureUnit || "ks",
         unitPrice: matched.price || matched.unitPrice || items[idx]?.unitPrice || 0,
-        vatRate: matched.vatRate != null ? matched.vatRate : (items[idx]?.vatRate ?? 21),
+        vatRate: resolveVatRate(matched.vatRate ?? items[idx]?.vatRate),
       });
     } else {
       handleUpdateItem(idx, { name: newName });
@@ -201,12 +210,13 @@ export function InvoiceFormModal({
   const calculatedItems = items.map((item) => {
     const qty = safeNumber(item.quantity, 1);
     const price = safeNumber(item.unitPrice, 0);
-    const rate = safeNumber(item.vatRate, 21);
+    const rate = item.vatRate != null ? safeNumber(item.vatRate, 21) : 21;
     const base = qty * price;
     const vat = base * (rate / 100);
     const total = base + vat;
     return {
       ...item,
+      vatRate: rate,
       base,
       vat,
       total,
@@ -217,9 +227,13 @@ export function InvoiceFormModal({
   const totalVat = calculatedItems.reduce((sum, i) => sum + i.vat, 0);
   const grandTotal = totalBase + totalVat;
 
-  // VAT Recapitulation by rates
-  const vatSummary = [21, 12, 0].map((rate) => {
-    const itemsInRate = calculatedItems.filter((i) => Math.round(safeNumber(i.vatRate, 0)) === rate);
+  // Dynamic VAT Recapitulation by all rates present in items
+  const distinctRates = Array.from(
+    new Set(calculatedItems.map((i) => Math.round(safeNumber(i.vatRate, 21))))
+  ).sort((a, b) => b - a);
+
+  const vatSummary = distinctRates.map((rate) => {
+    const itemsInRate = calculatedItems.filter((i) => Math.round(safeNumber(i.vatRate, 21)) === rate);
     const base = itemsInRate.reduce((sum, i) => sum + i.base, 0);
     const vat = itemsInRate.reduce((sum, i) => sum + i.vat, 0);
     return { rate, base, vat, total: base + vat };
@@ -690,12 +704,17 @@ export function InvoiceFormModal({
                           <select
                             className="input-control"
                             style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
-                            value={item.vatRate ?? 21}
-                            onChange={(e) => handleUpdateItem(idx, { vatRate: parseInt(e.target.value, 10) })}
+                            value={item.vatRate != null ? Number(item.vatRate) : 21}
+                            onChange={(e) => handleUpdateItem(idx, { vatRate: parseFloat(e.target.value) || 0 })}
                           >
                             <option value={21}>21 %</option>
+                            <option value={15}>15 %</option>
                             <option value={12}>12 %</option>
+                            <option value={10}>10 %</option>
                             <option value={0}>0 % (Osvob.)</option>
+                            {![21, 15, 12, 10, 0].includes(Number(item.vatRate)) && item.vatRate != null && (
+                              <option value={Number(item.vatRate)}>{item.vatRate} %</option>
+                            )}
                           </select>
                         </td>
                         <td style={{ textAlign: "right", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
