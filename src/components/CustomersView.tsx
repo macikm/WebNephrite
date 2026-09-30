@@ -104,16 +104,25 @@ export function CustomersView({
 
   return (
     <ErrorBoundary fallbackTitle="Chyba při zobrazení adresáře CRM">
-      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {/* ASOL Breadcrumbs */}
+        <div className="asol-breadcrumb">
+          <span className="link">Dashboard</span>
+          <span className="separator">/</span>
+          <span className="link">CRM</span>
+          <span className="separator">/</span>
+          <span className="current">{activeTab === "companies" ? "Firmy a partneři" : "Kontaktní osoby"}</span>
+        </div>
+
         {/* Header filter & search */}
-        <div className="glass-panel" style={{ padding: "1.25rem 1.5rem" }}>
+        <div className="glass-panel" style={{ padding: "0.85rem 1.25rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
             {/* Subtabs toggle */}
-            <div style={{ display: "flex", gap: "0.5rem", background: "rgba(10, 15, 25, 0.7)", padding: "0.25rem", borderRadius: "var(--radius-md)" }}>
+            <div style={{ display: "flex", gap: "0.35rem", background: "#f1f5f9", border: "1px solid #cbd5e1", padding: "0.25rem", borderRadius: "var(--radius-md)" }}>
               <button
                 onClick={() => { setActiveTab("companies"); setSortKey("name"); setCurrentPage(1); }}
                 className={`btn ${activeTab === "companies" ? "btn-primary" : "btn-secondary"}`}
-                style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
+                style={{ padding: "0.35rem 0.85rem", fontSize: "0.825rem" }}
               >
                 <Building size={14} />
                 <span>Firmy & Partneři ({customers.length})</span>
@@ -121,7 +130,7 @@ export function CustomersView({
               <button
                 onClick={() => { setActiveTab("contacts"); setSortKey("name"); setCurrentPage(1); }}
                 className={`btn ${activeTab === "contacts" ? "btn-primary" : "btn-secondary"}`}
-                style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
+                style={{ padding: "0.35rem 0.85rem", fontSize: "0.825rem" }}
               >
                 <User size={14} />
                 <span>Kontaktní osoby ({contacts.length})</span>
@@ -547,31 +556,33 @@ export function CustomersView({
                   <button
                     onClick={() => setSelectedContact(null)}
                     style={{
-                      width: "34px",
-                      height: "34px",
-                      borderRadius: "8px",
-                      background: "rgba(255,255,255,0.08)",
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "6px",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: "var(--text-muted)",
+                      color: "#64748b",
+                      cursor: "pointer",
                     }}
                     title="Zavřít"
                   >
-                    <X size={18} />
+                    <X size={15} />
                   </button>
                 </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <div style={{
-                  background: "rgba(10, 15, 25, 0.6)",
-                  padding: "1.25rem",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border-subtle)",
+                  background: "#f8fafc",
+                  padding: "1rem",
+                  borderRadius: "6px",
+                  border: "1px solid #e2e8f0",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.85rem",
+                  gap: "0.75rem",
                 }}>
                   <div>
                     <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Pracovní pozice / Funkce:</div>
@@ -683,31 +694,33 @@ export function CustomersView({
                   <button
                     onClick={() => setSelectedCustomer(null)}
                     style={{
-                      width: "34px",
-                      height: "34px",
-                      borderRadius: "8px",
-                      background: "rgba(255,255,255,0.08)",
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "6px",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: "var(--text-muted)",
+                      color: "#64748b",
+                      cursor: "pointer",
                     }}
                     title="Zavřít"
                   >
-                    <X size={18} />
+                    <X size={15} />
                   </button>
                 </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <div style={{
-                  background: "rgba(10, 15, 25, 0.6)",
-                  padding: "1.25rem",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border-subtle)",
+                  background: "#f8fafc",
+                  padding: "1rem",
+                  borderRadius: "6px",
+                  border: "1px solid #e2e8f0",
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: "0.85rem",
+                  gap: "0.75rem",
                 }}>
                   <div>
                     <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>IČO:</div>

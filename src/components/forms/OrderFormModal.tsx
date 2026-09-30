@@ -9,7 +9,9 @@ import {
   Calendar, 
   Package, 
   Save, 
-  AlertCircle 
+  AlertCircle,
+  CornerUpLeft,
+  Building
 } from "lucide-react";
 import { Order, OrderItem, Customer, Product } from "@/types/helios";
 import { safeCurrency, safeNumber } from "@/lib/table-utils";
@@ -41,35 +43,38 @@ export function OrderFormModal({
   const activeInitial = initialOrder || initialData;
   const isEdit = Boolean(activeInitial);
 
+  // Tabs
+  const [activeTab, setActiveTab] = useState<"header" | "items" | "other">("header");
+
   const [subType, setSubType] = useState<"received" | "issued">(defaultSubType);
   const [orderNumber, setOrderNumber] = useState(
-    initialOrder?.orderNumber || initialOrder?.number || `OBJ${new Date().getFullYear()}${String(Math.floor(Math.random() * 900) + 100)}`
+    activeInitial?.orderNumber || activeInitial?.number || `OBJ${new Date().getFullYear()}${String(Math.floor(Math.random() * 900) + 100)}`
   );
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | "">(
-    initialOrder?.customer?.id || ""
+    activeInitial?.customer?.id || ""
   );
   const [customCustomerName, setCustomCustomerName] = useState(
-    initialOrder?.customer?.name || initialOrder?.customerName || ""
+    activeInitial?.customer?.name || activeInitial?.customerName || ""
   );
 
   const todayStr = new Date().toISOString().split("T")[0];
   const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
   const [orderDate, setOrderDate] = useState(
-    initialOrder?.orderDate ? initialOrder.orderDate.split("T")[0] : todayStr
+    activeInitial?.orderDate ? activeInitial.orderDate.split("T")[0] : todayStr
   );
   const [deliveryDate, setDeliveryDate] = useState(
-    initialOrder?.deliveryDate ? initialOrder.deliveryDate.split("T")[0] : in7Days
+    activeInitial?.deliveryDate ? activeInitial.deliveryDate.split("T")[0] : in7Days
   );
 
-  const [status, setStatus] = useState(initialOrder?.status || "V řešení");
-  const [currency, setCurrency] = useState(initialOrder?.currency || "CZK");
-  const [note, setNote] = useState(initialOrder?.note || "");
+  const [status, setStatus] = useState(activeInitial?.status || "V řešení");
+  const [currency, setCurrency] = useState(activeInitial?.currency || "CZK");
+  const [note, setNote] = useState(activeInitial?.note || "");
 
   // Order Items
   const [items, setItems] = useState<OrderItem[]>(
-    initialOrder?.items && initialOrder.items.length > 0 ? initialOrder.items : []
+    activeInitial?.items && activeInitial.items.length > 0 ? activeInitial.items : []
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,92 +103,97 @@ export function OrderFormModal({
       name: prod.name,
       measureUnit: prod.measureUnit || "ks",
       unitPrice: prod.price || prod.unitPrice || 0,
+      totalPrice: Number(prod.price || prod.unitPrice || 0) * 1,
     };
 
     if (pickerTargetRow === "new") {
       setItems((prev) => [
         ...prev,
         {
-          id: Date.now(),
+          id: Math.floor(Math.random() * 90000) + 10000,
           quantity: 1,
           ...itemData,
-        },
+        } as OrderItem,
       ]);
-    } else if (typeof pickerTargetRow === "number") {
-      handleUpdateItem(pickerTargetRow, itemData);
-    }
-  };
-
-  const handleItemNameChange = (idx: number, newName: string) => {
-    const matched = products.find(
-      (p) => p.name.toLowerCase() === newName.toLowerCase().trim()
-    );
-    if (matched) {
-      handleUpdateItem(idx, {
-        productId: matched.id,
-        name: matched.name,
-        measureUnit: matched.measureUnit || items[idx]?.measureUnit || "ks",
-        unitPrice: matched.price || matched.unitPrice || items[idx]?.unitPrice || 0,
-      });
     } else {
-      handleUpdateItem(idx, { name: newName });
+      setItems((prev) => {
+        const copy = [...prev];
+        if (copy[pickerTargetRow]) {
+          const currentQty = copy[pickerTargetRow].quantity || 1;
+          copy[pickerTargetRow] = {
+            ...copy[pickerTargetRow],
+            ...itemData,
+            quantity: currentQty,
+            totalPrice: Number(itemData.unitPrice || 0) * currentQty,
+          };
+        }
+        return copy;
+      });
+    }
+    setIsProductPickerOpen(false);
+  };
+
+  // Autocomplete support in text input
+  const handleItemNameChange = (index: number, val: string) => {
+    const matchedProduct = products.find(
+      (p) => p.name.trim().toLowerCase() === val.trim().toLowerCase()
+    );
+
+    if (matchedProduct) {
+      handleUpdateItem(index, "name", matchedProduct.name);
+      handleUpdateItem(index, "productId", matchedProduct.id);
+      if (matchedProduct.price || matchedProduct.unitPrice) {
+        const price = Number(matchedProduct.price || matchedProduct.unitPrice);
+        handleUpdateItem(index, "unitPrice", price);
+        const currentQty = items[index]?.quantity || 1;
+        handleUpdateItem(index, "totalPrice", price * currentQty);
+      }
+      if (matchedProduct.measureUnit) {
+        handleUpdateItem(index, "measureUnit", matchedProduct.measureUnit);
+      }
+    } else {
+      handleUpdateItem(index, "name", val);
     }
   };
 
-  const handleAddItem = (productId?: number) => {
-    if (productId) {
-      const prod = products.find((p) => p.id === productId);
-      if (prod) {
-        const newItem: OrderItem = {
-          id: Date.now(),
-          productId: prod.id,
-          name: prod.name,
-          quantity: 1,
-          measureUnit: prod.measureUnit || "ks",
-          unitPrice: prod.price || prod.unitPrice || 500,
-        };
-        setItems((prev) => [...prev, newItem]);
-        return;
-      }
-    }
-
+  const handleAddItem = (prod?: Product) => {
     const newItem: OrderItem = {
-      id: Date.now(),
-      name: "",
+      id: Math.floor(Math.random() * 90000) + 10000,
+      productId: prod?.id,
+      name: prod?.name || "",
       quantity: 1,
-      measureUnit: "ks",
-      unitPrice: 0,
+      measureUnit: prod?.measureUnit || "ks",
+      unitPrice: prod?.price || prod?.unitPrice || 0,
+      totalPrice: prod?.price || prod?.unitPrice || 0,
     };
     setItems((prev) => [...prev, newItem]);
-  };
-
-  const handleUpdateItem = (index: number, patch: Partial<OrderItem>) => {
-    setItems((prev) => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], ...patch };
-      return copy;
-    });
   };
 
   const handleRemoveItem = (index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const calculatedItems = items.map((i) => {
-    const qty = safeNumber(i.quantity, 1);
-    const price = safeNumber(i.unitPrice, 0);
-    return {
-      ...i,
-      totalPrice: qty * price,
-    };
-  });
+  const handleUpdateItem = (index: number, field: keyof OrderItem, val: any) => {
+    setItems((prev) => {
+      const copy = [...prev];
+      const item = { ...copy[index], [field]: val };
+      if (field === "quantity" || field === "unitPrice") {
+        const q = field === "quantity" ? Number(val) : Number(item.quantity || 0);
+        const p = field === "unitPrice" ? Number(val) : Number(item.unitPrice || 0);
+        item.totalPrice = Math.round(q * p * 100) / 100;
+      }
+      copy[index] = item;
+      return copy;
+    });
+  };
 
-  const grandTotal = calculatedItems.reduce((sum, i) => sum + i.totalPrice, 0);
+  const grandTotal = items.reduce((sum, item) => sum + (Number(item.totalPrice) || (Number(item.quantity || 1) * Number(item.unitPrice || 0))), 0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!orderNumber.trim()) {
-      setErrorMessage("Zadejte prosím číslo objednávky.");
+  const handleSubmit = async (e?: React.FormEvent, closeAfter = true) => {
+    if (e) e.preventDefault();
+    if (items.length === 0) {
+      setErrorMessage("Objednávka musí obsahovat alespoň jednu položku.");
+      setActiveTab("items");
       return;
     }
 
@@ -193,44 +203,56 @@ export function OrderFormModal({
     const partnerName = customCustomerName.trim() || "Nezadaný partner";
     const partnerId = typeof selectedCustomerId === "number" ? selectedCustomerId : undefined;
 
-    const payloadOrder: Order = {
-      id: initialOrder?.id || Math.floor(Math.random() * 90000) + 10000,
+    const payload: Order = {
+      id: activeInitial?.id || Math.floor(Math.random() * 90000) + 10000,
       number: orderNumber,
-      orderNumber,
-      customerName: partnerName,
+      orderNumber: orderNumber,
+      orderDate: new Date(orderDate).toISOString(),
+      deliveryDate: new Date(deliveryDate).toISOString(),
+      status: status,
+      totalAmount: grandTotal,
+      currency: currency,
+      note: note,
       customer: {
         id: partnerId,
         name: partnerName,
       },
-      orderDate: new Date(orderDate).toISOString(),
-      deliveryDate: new Date(deliveryDate).toISOString(),
-      status,
-      currency,
-      totalAmount: grandTotal,
-      note,
-      items: calculatedItems,
+      customerName: partnerName,
+      items: items.map((i) => ({
+        id: i.id,
+        productId: i.productId,
+        name: i.name,
+        quantity: i.quantity,
+        measureUnit: i.measureUnit,
+        unitPrice: i.unitPrice,
+        totalPrice: i.totalPrice,
+      })),
     };
 
     try {
-      const endpoint = subType === "received" ? "v1/warehouse/ordersReceived" : "v1/warehouse/ordersIssued";
-      const url = isEdit ? `/api/helios/${endpoint}/${payloadOrder.id}` : `/api/helios/${endpoint}`;
-
+      const endpoint = subType === "received" ? "v1/orders/ordersReceived" : "v1/orders/ordersIssued";
+      const url = isEdit ? `/api/helios/${endpoint}/${payload.id}` : `/api/helios/${endpoint}`;
+      
       const res = await fetch(url, {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadOrder),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        console.warn("Helios API returned non-OK status, saving locally:", res.status);
+        console.warn("Helios API non-OK, updating local state:", res.status);
       }
 
-      onSave(payloadOrder);
-      onClose();
-    } catch (err: unknown) {
-      console.warn("Failed to reach Helios API directly, updating locally:", err);
-      onSave(payloadOrder);
-      onClose();
+      onSave(payload);
+      if (closeAfter) {
+        onClose();
+      }
+    } catch (err) {
+      console.warn("API request failed, fallback to local state:", err);
+      onSave(payload);
+      if (closeAfter) {
+        onClose();
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -245,73 +267,129 @@ export function OrderFormModal({
     >
       <div 
         className="modal-dialog animate-fade-in" 
-        style={{ maxWidth: "880px", padding: "2rem" }}
+        style={{ maxWidth: "1050px", padding: "1.5rem" }}
       >
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-            <div style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "10px",
-              background: "linear-gradient(135deg, var(--accent-blue), #2563eb)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              boxShadow: "0 4px 15px rgba(59, 130, 246, 0.35)",
-            }}>
-              <ShoppingCart size={22} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: "1.35rem", fontWeight: 800 }}>
-                {isEdit ? "Úprava objednávky" : "Nová objednávka"}
-              </h2>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                {subType === "received" ? "Přijatá objednávka od zákazníka" : "Vydaná objednávka dodavateli"}
-              </div>
-            </div>
+        {/* ASOL Breadcrumbs */}
+        <div className="asol-breadcrumb" style={{ margin: "0 0 1rem 0" }}>
+          <span className="link">Dashboard</span>
+          <span className="separator">/</span>
+          <span className="link">Obchod</span>
+          <span className="separator">/</span>
+          <span className="link">{subType === "received" ? "Objednávky přijaté" : "Objednávky vydané"}</span>
+          <span className="separator">/</span>
+          <span className="current">{orderNumber}:</span>
+        </div>
+
+        {/* Top Action Toolbar */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+          marginBottom: "1rem",
+          paddingBottom: "0.75rem",
+          borderBottom: "1px solid #e2e8f0",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <button
+              type="button"
+              onClick={() => handleSubmit(undefined, false)}
+              disabled={isSubmitting}
+              className="asol-btn-save"
+            >
+              <Save size={15} />
+              <span>{isSubmitting ? "Ukládám..." : "Uložit"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSubmit(undefined, true)}
+              disabled={isSubmitting}
+              className="asol-btn-save"
+            >
+              <CornerUpLeft size={15} />
+              <span>Uložit a zpět</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="asol-btn-back"
+            >
+              <X size={15} />
+              <span>Zpět</span>
+            </button>
           </div>
 
+          <div style={{
+            fontSize: "0.8rem",
+            color: "#64748b",
+            background: "#f1f5f9",
+            padding: "0.3rem 0.75rem",
+            borderRadius: "4px",
+            border: "1px solid #cbd5e1",
+          }}>
+            Stav: <strong style={{ color: "#0284c7" }}>{isEdit ? "Rozpracováno" : "Nová objednávka"}</strong>
+          </div>
+        </div>
+
+        {/* ASOL Navigation Tabs */}
+        <div className="asol-tabs">
           <button
-            onClick={onClose}
-            style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "8px",
-              background: "rgba(255,255,255,0.08)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--text-muted)",
-            }}
+            type="button"
+            onClick={() => setActiveTab("header")}
+            className={`asol-tab ${activeTab === "header" ? "active" : ""}`}
           >
-            <X size={18} />
+            Hlavička
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("items")}
+            className={`asol-tab ${activeTab === "items" ? "active" : ""}`}
+          >
+            Položky objednávky ({items.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("other")}
+            className={`asol-tab ${activeTab === "other" ? "active" : ""}`}
+          >
+            Ostatní
           </button>
         </div>
 
         {errorMessage && (
           <div style={{
-            background: "rgba(244, 63, 94, 0.15)",
-            border: "1px solid rgba(244, 63, 94, 0.4)",
-            color: "#fda4af",
-            padding: "0.75rem 1rem",
-            borderRadius: "var(--radius-md)",
-            marginBottom: "1.25rem",
+            background: "#fee2e2",
+            border: "1px solid #fca5a5",
+            color: "#dc2626",
+            padding: "0.65rem 1rem",
+            borderRadius: "6px",
+            marginBottom: "1rem",
             display: "flex",
             alignItems: "center",
             gap: "0.5rem",
-            fontSize: "0.875rem",
+            fontSize: "0.85rem",
           }}>
             <AlertCircle size={16} />
             <span>{errorMessage}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          {/* Header section */}
-          <div className="form-section">
-            <div className="form-grid-3" style={{ marginBottom: "1rem" }}>
+        {/* Tab 1: HLAVIČKA */}
+        {activeTab === "header" && (
+          <div style={{
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            borderRadius: "6px",
+            padding: "1.25rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+          }}>
+            <div className="form-grid-3">
               <div>
                 <label className="label-control">Typ objednávky</label>
                 <select
@@ -319,8 +397,8 @@ export function OrderFormModal({
                   value={subType}
                   onChange={(e) => setSubType(e.target.value as "received" | "issued")}
                 >
-                  <option value="received">Přijatá objednávka (Odběratelská)</option>
-                  <option value="issued">Vydaná objednávka (Dodavatelská)</option>
+                  <option value="received">Přijatá (od zákazníka)</option>
+                  <option value="issued">Vydaná (dodavateli)</option>
                 </select>
               </div>
 
@@ -333,62 +411,70 @@ export function OrderFormModal({
                   style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value)}
-                  placeholder="např. OBJ2026-001"
                 />
               </div>
 
               <div>
-                <label className="label-control">Stav vyřízení</label>
+                <label className="label-control">Stav zpracování</label>
                 <select
                   className="input-control"
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                 >
-                  <option value="Přijato">Přijato</option>
                   <option value="V řešení">V řešení</option>
-                  <option value="Vyskladněno">Vyskladněno</option>
-                  <option value="Dokončeno">Dokončeno</option>
-                  <option value="Stornováno">Stornováno</option>
+                  <option value="Potvrzeno">Potvrzeno</option>
+                  <option value="Vyřízeno">Vyřízeno</option>
+                  <option value="Zrušeno">Zrušeno</option>
                 </select>
               </div>
             </div>
 
-            <div className="form-grid-2">
+            <div className="form-grid-3">
               <div>
-                <label className="label-control">Výběr partnera ze systému</label>
+                <label className="label-control">Výběr partnera z adresáře</label>
                 <select
                   className="input-control"
                   value={selectedCustomerId}
                   onChange={(e) => handleCustomerSelect(e.target.value)}
                 >
-                  <option value="">— Vyberte partnera ze seznamu —</option>
+                  <option value="">— Vyberte partnera ze systému —</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} {c.tin ? `(IČO: ${c.tin})` : ""}
+                      {c.name}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="label-control">Název partnera / zákazníka *</label>
+                <label className="label-control">Název partnera *</label>
                 <input
                   type="text"
                   required
                   className="input-control"
                   value={customCustomerName}
                   onChange={(e) => setCustomCustomerName(e.target.value)}
-                  placeholder="Zadejte název zákazníka..."
+                  placeholder="Zadejte název partnera..."
                 />
               </div>
-            </div>
-          </div>
 
-          {/* Dates & Currency */}
-          <div className="form-section">
+              <div>
+                <label className="label-control">Měna dokladu</label>
+                <select
+                  className="input-control"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                >
+                  <option value="CZK">CZK - Česká koruna</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="USD">USD - US Dolar</option>
+                </select>
+              </div>
+            </div>
+
             <div className="form-grid-3">
               <div>
-                <label className="label-control">Datum objednávky</label>
+                <label className="label-control">Datum objednání</label>
                 <input
                   type="date"
                   className="input-control"
@@ -402,55 +488,47 @@ export function OrderFormModal({
                 <input
                   type="date"
                   className="input-control"
-                  style={{ color: "var(--accent-cyan)", fontWeight: 600 }}
                   value={deliveryDate}
                   onChange={(e) => setDeliveryDate(e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="label-control">Měna</label>
-                <select
-                  className="input-control"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                >
-                  <option value="CZK">CZK (Kč)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="USD">USD ($)</option>
-                </select>
+                <label className="label-control">Celková částka</label>
+                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0284c7", padding: "0.4rem 0" }}>
+                  {safeCurrency(grandTotal)}
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Items Editor */}
-          <div className="form-section" style={{ background: "rgba(15, 23, 42, 0.85)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
-              <div className="form-section-title" style={{ margin: 0, color: "var(--accent-blue)" }}>
-                <Package size={16} />
-                <span>Položky objednávky ({items.length})</span>
+        {/* Tab 2: POLOŽKY OBJEDNÁVKY */}
+        {activeTab === "items" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155" }}>
+                Položky objednávky ({items.length})
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <button
                   type="button"
                   onClick={() => {
                     setPickerTargetRow("new");
                     setIsProductPickerOpen(true);
                   }}
-                  className="btn btn-secondary"
-                  style={{ padding: "0.4rem 0.85rem", fontSize: "0.8rem", gap: "0.35rem" }}
-                  title="Otevřít katalog zboží pro výběr položky"
+                  className="asol-btn"
+                  style={{ color: "#0284c7", borderColor: "#bae6fd", background: "#f0f9ff" }}
                 >
-                  <Package size={14} style={{ color: "var(--accent-cyan)" }} />
+                  <Package size={14} />
                   <span>Vybrat ze skladu / ceníku...</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleAddItem()}
-                  className="btn btn-primary"
-                  style={{ padding: "0.4rem 0.85rem", fontSize: "0.8rem", gap: "0.35rem" }}
+                  className="asol-btn"
                 >
                   <Plus size={14} />
                   <span>Přidat volný řádek</span>
@@ -458,7 +536,6 @@ export function OrderFormModal({
               </div>
             </div>
 
-            {/* Datalist for order items autocomplete */}
             <datalist id="order-products-datalist">
               {products.map((p) => (
                 <option key={p.id} value={p.name}>
@@ -467,200 +544,202 @@ export function OrderFormModal({
               ))}
             </datalist>
 
-            <div className="table-wrapper" style={{ maxHeight: "300px", overflowY: "auto" }}>
-              <table className="erp-table" style={{ minWidth: "700px" }}>
+            <div className="table-wrapper" style={{ maxHeight: "360px", overflowY: "auto" }}>
+              <table className="erp-table" style={{ minWidth: "850px" }}>
                 <thead>
                   <tr>
-                    <th style={{ width: "45%" }}>Popis položky</th>
-                    <th style={{ width: "15%" }}>Množství</th>
-                    <th style={{ width: "12%" }}>Jednotka</th>
-                    <th style={{ width: "18%" }}>Cena za jednotku</th>
-                    <th style={{ width: "20%" }}>Celkem</th>
-                    <th style={{ width: "40px" }}></th>
+                    <th style={{ width: "35px", textAlign: "center" }}>ř.</th>
+                    <th style={{ width: "120px" }}>Kód položky</th>
+                    <th>Zboží / Popis položky</th>
+                    <th style={{ width: "90px" }}>Množství</th>
+                    <th style={{ width: "70px" }}>MJ</th>
+                    <th style={{ width: "140px", textAlign: "right" }}>Cena / MJ</th>
+                    <th style={{ width: "140px", textAlign: "right" }}>Celkem</th>
+                    <th style={{ width: "45px", textAlign: "center" }}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {calculatedItems.length === 0 ? (
+                  {items.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem 1.5rem", color: "var(--text-dim)" }}>
-                        <div style={{ marginBottom: "0.85rem", fontSize: "0.9rem", color: "var(--text-muted)" }}>
-                          Objednávka zatím neobsahuje žádné položky.
-                        </div>
-                        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPickerTargetRow("new");
-                              setIsProductPickerOpen(true);
-                            }}
-                            className="btn btn-secondary"
-                            style={{ padding: "0.45rem 1rem", fontSize: "0.85rem", gap: "0.35rem" }}
-                          >
-                            <Package size={15} style={{ color: "var(--accent-cyan)" }} />
-                            <span>Vybrat ze skladu / ceníku</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAddItem()}
-                            className="btn btn-primary"
-                            style={{ padding: "0.45rem 1rem", fontSize: "0.85rem", gap: "0.35rem" }}
-                          >
-                            <Plus size={15} />
-                            <span>Přidat volný řádek</span>
-                          </button>
-                        </div>
+                      <td colSpan={8} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#64748b" }}>
+                        Objednávka zatím neobsahuje žádné položky. Klikněte na <strong>Vybrat ze skladu / ceníku</strong> nebo <strong>Přidat volný řádek</strong>.
                       </td>
                     </tr>
                   ) : (
-                    calculatedItems.map((item, idx) => (
-                      <tr key={item.id || idx}>
-                        <td>
-                          <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
+                    items.map((item, idx) => {
+                      const lineTotal = Number(item.totalPrice) || (Number(item.quantity || 1) * Number(item.unitPrice || 0));
+                      return (
+                        <tr key={item.id || idx}>
+                          <td style={{ textAlign: "center", color: "#64748b", fontWeight: 600 }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
+                            {item.productId ? `FN${String(item.productId).padStart(5, "0")}` : "—"}
+                          </td>
+                          <td>
+                            <div style={{ display: "flex", gap: "0.25rem", alignItems: "center" }}>
+                              <input
+                                type="text"
+                                required
+                                list="order-products-datalist"
+                                className="input-control"
+                                style={{ padding: "0.3rem 0.5rem", fontSize: "0.825rem", flex: 1 }}
+                                value={item.name || ""}
+                                placeholder="Vyberte nebo zadejte položku..."
+                                onChange={(e) => handleItemNameChange(idx, e.target.value)}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPickerTargetRow(idx);
+                                  setIsProductPickerOpen(true);
+                                }}
+                                className="asol-btn asol-btn-icon"
+                                style={{ width: "26px", height: "26px", fontSize: "0.75rem", flexShrink: 0 }}
+                                title="Vybrat produkt ze skladu / ceníku..."
+                              >
+                                ...
+                              </button>
+                            </div>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="any"
+                              className="input-control"
+                              style={{ padding: "0.3rem 0.4rem", fontSize: "0.825rem", textAlign: "right" }}
+                              value={item.quantity ?? 1}
+                              onChange={(e) => handleUpdateItem(idx, "quantity", parseFloat(e.target.value) || 0)}
+                            />
+                          </td>
+                          <td>
                             <input
                               type="text"
-                              required
-                              list="order-products-datalist"
                               className="input-control"
-                              style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", flex: 1 }}
-                              value={item.name || ""}
-                              placeholder="Položka nebo název ze skladu..."
-                              onChange={(e) => handleItemNameChange(idx, e.target.value)}
+                              style={{ padding: "0.3rem 0.4rem", fontSize: "0.825rem", textAlign: "center" }}
+                              value={item.measureUnit || "ks"}
+                              onChange={(e) => handleUpdateItem(idx, "measureUnit", e.target.value)}
                             />
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <input
+                              type="number"
+                              step="any"
+                              className="input-control"
+                              style={{ padding: "0.3rem 0.4rem", fontSize: "0.825rem", textAlign: "right" }}
+                              value={item.unitPrice ?? 0}
+                              onChange={(e) => handleUpdateItem(idx, "unitPrice", parseFloat(e.target.value) || 0)}
+                            />
+                          </td>
+                          <td style={{ textAlign: "right", fontWeight: 700, color: "#0284c7" }}>
+                            {safeCurrency(lineTotal)}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
                             <button
                               type="button"
-                              onClick={() => {
-                                setPickerTargetRow(idx);
-                                setIsProductPickerOpen(true);
-                              }}
-                              className="btn btn-secondary"
-                              style={{
-                                padding: "0.35rem 0.55rem",
-                                fontSize: "0.75rem",
-                                height: "32px",
-                                minWidth: "34px",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "var(--brand-primary)",
-                                borderColor: "rgba(59, 130, 246, 0.3)",
-                                fontWeight: 700,
-                              }}
-                              title="Vybrat položku ze skladu / ceníku (...)"
+                              onClick={() => handleRemoveItem(idx)}
+                              className="asol-btn asol-btn-icon"
+                              style={{ width: "26px", height: "26px", color: "#dc2626" }}
+                              title="Smazat řádek"
                             >
-                              ...
+                              <Trash2 size={13} />
                             </button>
-                          </div>
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            step="any"
-                            min="0.01"
-                            required
-                            className="input-control"
-                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right" }}
-                            value={item.quantity ?? 1}
-                            onChange={(e) => handleUpdateItem(idx, { quantity: parseFloat(e.target.value) || 0 })}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            className="input-control"
-                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "center" }}
-                            value={item.measureUnit || "ks"}
-                            onChange={(e) => handleUpdateItem(idx, { measureUnit: e.target.value })}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            step="any"
-                            required
-                            className="input-control"
-                            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", textAlign: "right" }}
-                            value={item.unitPrice ?? 0}
-                            onChange={(e) => handleUpdateItem(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
-                          />
-                        </td>
-                        <td style={{ textAlign: "right", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                          {safeCurrency(item.totalPrice, currency)}
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(idx)}
-                            style={{
-                              color: "var(--accent-rose)",
-                              padding: "4px",
-                              cursor: "pointer",
-                              background: "transparent",
-                              border: "none",
-                            }}
-                            title="Smazat položku"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
-              <div style={{
-                background: "rgba(59, 130, 246, 0.1)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
-                borderRadius: "var(--radius-md)",
-                padding: "0.75rem 1.5rem",
-                textAlign: "right",
-              }}>
-                <div style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--accent-blue)", fontWeight: 700 }}>
-                  Celková hodnota objednávky
-                </div>
-                <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#fff", fontFamily: "var(--font-mono)" }}>
-                  {safeCurrency(grandTotal, currency)}
-                </div>
+            <div style={{
+              background: "#f8fafc",
+              border: "1px solid #cbd5e1",
+              borderRadius: "6px",
+              padding: "0.85rem 1.25rem",
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+            }}>
+              <div style={{ textAlign: "right" }}>
+                <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Celková hodnota položek: </span>
+                <span style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0284c7", marginLeft: "0.5rem" }}>
+                  {safeCurrency(grandTotal)}
+                </span>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Note */}
-          <div style={{ marginBottom: "1.5rem" }}>
+        {/* Tab 3: OSTATNÍ */}
+        {activeTab === "other" && (
+          <div style={{
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            borderRadius: "6px",
+            padding: "1.25rem",
+          }}>
             <label className="label-control">Poznámka k objednávce</label>
             <textarea
               className="input-control"
-              rows={2}
+              rows={4}
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Instrukce k dodání, kontaktní místo na stavbě..."
+              placeholder="Doplňující specifikace, dodací podmínky, interní instrukce..."
             />
           </div>
+        )}
 
-          {/* Actions */}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", borderTop: "1px solid var(--border-subtle)", paddingTop: "1.25rem" }}>
+        {/* Bottom Actions Bar */}
+        <div style={{
+          marginTop: "1.25rem",
+          paddingTop: "1rem",
+          borderTop: "1px solid #e2e8f0",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <button
+              type="button"
+              onClick={() => handleSubmit(undefined, false)}
+              disabled={isSubmitting}
+              className="asol-btn-save"
+            >
+              <Save size={15} />
+              <span>{isSubmitting ? "Ukládám..." : "Uložit"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSubmit(undefined, true)}
+              disabled={isSubmitting}
+              className="asol-btn-save"
+            >
+              <CornerUpLeft size={15} />
+              <span>Uložit a zpět</span>
+            </button>
+
             <button
               type="button"
               onClick={onClose}
-              className="btn btn-secondary"
-            >
-              Zrušit
-            </button>
-            <button
-              type="submit"
               disabled={isSubmitting}
-              className="btn btn-primary"
-              style={{ minWidth: "160px" }}
+              className="asol-btn-back"
             >
-              <Save size={16} />
-              <span>{isSubmitting ? "Ukládám..." : isEdit ? "Uložit změny" : "Vytvořit objednávku"}</span>
+              <X size={15} />
+              <span>Zpět</span>
             </button>
           </div>
-        </form>
 
-        {/* Product Picker Modal */}
+          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+            © 2026 - Asseco Solutions, a.s. | Helios Nephrite API
+          </div>
+        </div>
+
         <ProductPickerModal
           isOpen={isProductPickerOpen}
           onClose={() => setIsProductPickerOpen(false)}

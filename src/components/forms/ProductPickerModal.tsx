@@ -59,32 +59,32 @@ export function ProductPickerModal({
     >
       <div
         className="modal-dialog animate-fade-in"
-        style={{ maxWidth: "860px", maxHeight: "85vh", display: "flex", flexDirection: "column", padding: "1.75rem" }}
+        style={{ maxWidth: "880px", maxHeight: "85vh", display: "flex", flexDirection: "column", padding: "1.5rem" }}
       >
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", paddingBottom: "0.75rem", borderBottom: "1px solid #e2e8f0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
             <div
               style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, var(--brand-primary), #059669)",
+                width: "36px",
+                height: "36px",
+                borderRadius: "6px",
+                background: "#e0f2fe",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#fff",
-                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+                color: "#0284c7",
+                border: "1px solid #bae6fd",
               }}
             >
-              <Package size={20} />
+              <Package size={18} />
             </div>
             <div>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0, color: "#1e293b" }}>
                 Výběr ze skladu a ceníku
-              </h2>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                Vyberte položku ze seznamu pro vložení do dokladu ({products.length} produktů celkem)
+              </h3>
+              <div style={{ fontSize: "0.775rem", color: "#64748b" }}>
+                Katalog položek ({products.length} položek)
               </div>
             </div>
           </div>
@@ -93,39 +93,40 @@ export function ProductPickerModal({
             type="button"
             onClick={onClose}
             style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              background: "rgba(255,255,255,0.08)",
+              width: "30px",
+              height: "30px",
+              borderRadius: "6px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "var(--text-muted)",
+              color: "#64748b",
               cursor: "pointer",
             }}
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
         {/* Search Bar */}
-        <div style={{ marginBottom: "1rem", position: "relative" }}>
+        <div style={{ marginBottom: "0.75rem", position: "relative" }}>
           <Search
-            size={16}
+            size={15}
             style={{
               position: "absolute",
-              left: "12px",
+              left: "10px",
               top: "50%",
               transform: "translateY(-50%)",
-              color: "var(--text-dim)",
+              color: "#64748b",
             }}
           />
           <input
             type="text"
             autoFocus
             className="input-control"
-            style={{ paddingLeft: "2.35rem", paddingRight: "2.35rem", fontSize: "0.9rem" }}
-            placeholder="Rychlé vyhledávání podle názvu, kódu položky nebo EAN..."
+            style={{ paddingLeft: "2.1rem", paddingRight: "2rem", fontSize: "0.85rem", height: "36px" }}
+            placeholder="Hledat podle názvu, kódu nebo popisu..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -140,23 +141,23 @@ export function ProductPickerModal({
                 transform: "translateY(-50%)",
                 background: "transparent",
                 border: "none",
-                color: "var(--text-dim)",
+                color: "#94a3b8",
                 cursor: "pointer",
               }}
             >
-              <X size={15} />
+              <X size={14} />
             </button>
           )}
         </div>
 
         {/* Results summary */}
-        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.6rem", display: "flex", justifyContent: "space-between" }}>
-          <span>Nalezeno: <strong style={{ color: "var(--text-main)" }}>{sortedProducts.length}</strong> položek</span>
-          <span>Dvojklikem nebo tlačítkem vložíte položku do dokladu</span>
+        <div style={{ fontSize: "0.775rem", color: "#64748b", marginBottom: "0.5rem", display: "flex", justifyContent: "space-between" }}>
+          <span>Nalezeno: <strong style={{ color: "#1e293b" }}>{sortedProducts.length}</strong> položek</span>
+          <span>Dvojklikem nebo tlačítkem vložíte do dokladu</span>
         </div>
 
         {/* Table of products */}
-        <div className="table-wrapper" style={{ flex: 1, maxHeight: "420px", overflowY: "auto", border: "1px solid var(--border-card)", borderRadius: "var(--radius-md)" }}>
+        <div className="table-wrapper" style={{ flex: 1, maxHeight: "400px", overflowY: "auto" }}>
           <table className="erp-table" style={{ width: "100%" }}>
             <thead>
               <tr>
@@ -166,16 +167,16 @@ export function ProductPickerModal({
                 >
                   <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
                     <span>Kód</span>
-                    <ArrowUpDown size={12} style={{ opacity: 0.4 }} />
+                    <ArrowUpDown size={11} style={{ opacity: 0.5 }} />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort("name")}
-                  style={{ width: "42%", cursor: "pointer", userSelect: "none" }}
+                  style={{ width: "45%", cursor: "pointer", userSelect: "none" }}
                 >
                   <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
                     <span>Název zboží / služby</span>
-                    <ArrowUpDown size={12} style={{ opacity: 0.4 }} />
+                    <ArrowUpDown size={11} style={{ opacity: 0.5 }} />
                   </div>
                 </th>
                 <th style={{ width: "10%", textAlign: "center" }}>Jednotka</th>
@@ -185,7 +186,7 @@ export function ProductPickerModal({
                 >
                   <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", justifyContent: "flex-end" }}>
                     <span>Cena bez DPH</span>
-                    <ArrowUpDown size={12} style={{ opacity: 0.4 }} />
+                    <ArrowUpDown size={11} style={{ opacity: 0.5 }} />
                   </div>
                 </th>
                 <th style={{ width: "8%", textAlign: "center" }}>DPH</th>
@@ -195,7 +196,7 @@ export function ProductPickerModal({
             <tbody>
               {sortedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-dim)" }}>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#64748b" }}>
                     {search ? `Žádné položky neodpovídají výrazu "${search}".` : "V ceníku nejsou k dispozici žádné položky."}
                   </td>
                 </tr>
@@ -216,35 +217,35 @@ export function ProductPickerModal({
                       }}
                       style={{ cursor: "pointer" }}
                     >
-                      <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--accent-cyan)", fontWeight: 600 }}>
+                      <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "#0284c7", fontWeight: 600 }}>
                         {code}
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, color: "var(--text-main)" }}>{p.name}</div>
+                        <div style={{ fontWeight: 600, color: "#1e293b" }}>{p.name}</div>
                         {p.description && (
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "340px" }}>
+                          <div style={{ fontSize: "0.75rem", color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "340px" }}>
                             {p.description}
                           </div>
                         )}
                       </td>
-                      <td style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                      <td style={{ textAlign: "center", fontSize: "0.8rem", color: "#64748b" }}>
                         {p.measureUnit || "ks"}
                       </td>
-                      <td style={{ textAlign: "right", fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--brand-primary)" }}>
+                      <td style={{ textAlign: "right", fontWeight: 700, fontFamily: "var(--font-mono)", color: "#0284c7" }}>
                         {safeCurrency(price)}
                       </td>
-                      <td style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                      <td style={{ textAlign: "center", fontSize: "0.8rem", color: "#64748b" }}>
                         {vatRate}
                       </td>
                       <td style={{ textAlign: "center" }}>
                         <button
                           type="button"
                           onClick={() => {
-                            onSelectProduct(p);
+                            onSelectProduct(productToSelect);
                             onClose();
                           }}
-                          className="btn btn-primary"
-                          style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", gap: "0.25rem" }}
+                          className="asol-btn"
+                          style={{ padding: "0.25rem 0.6rem", fontSize: "0.75rem", background: "#f0f9ff", color: "#0284c7", borderColor: "#bae6fd" }}
                           title="Vložit tuto položku"
                         >
                           <Check size={12} />
@@ -260,12 +261,12 @@ export function ProductPickerModal({
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.25rem", borderTop: "1px solid var(--border-subtle)", paddingTop: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem", borderTop: "1px solid #e2e8f0", paddingTop: "0.75rem" }}>
           <button
             type="button"
             onClick={onClose}
-            className="btn btn-secondary"
-            style={{ padding: "0.45rem 1.25rem" }}
+            className="asol-btn"
+            style={{ padding: "0.4rem 1.25rem" }}
           >
             Zavřít
           </button>

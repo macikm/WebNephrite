@@ -179,17 +179,19 @@ export function DocumentFormModal({
           <button
             onClick={onClose}
             style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "8px",
-              background: "rgba(255,255,255,0.08)",
+              width: "30px",
+              height: "30px",
+              borderRadius: "6px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "var(--text-muted)",
+              color: "#64748b",
+              cursor: "pointer",
             }}
           >
-            <X size={18} />
+            <X size={15} />
           </button>
         </div>
 
@@ -279,11 +281,11 @@ export function DocumentFormModal({
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               style={{
-                border: `2px dashed ${isDragging ? "var(--brand-primary)" : "rgba(255,255,255,0.18)"}`,
-                borderRadius: "var(--radius-md)",
+                border: `2px dashed ${isDragging ? "#0284c7" : "#cbd5e1"}`,
+                borderRadius: "6px",
                 padding: "2rem 1.5rem",
                 textAlign: "center",
-                background: isDragging ? "rgba(16, 185, 129, 0.08)" : "rgba(10, 15, 25, 0.5)",
+                background: isDragging ? "#f0f9ff" : "#f8fafc",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
               }}

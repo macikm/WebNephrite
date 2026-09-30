@@ -13,7 +13,10 @@ import {
   Calendar, 
   Eye,
   Plus,
-  Edit3
+  Edit3,
+  ChevronDown,
+  Download,
+  CheckSquare
 } from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
 import { Pagination } from "./Pagination";
@@ -52,11 +55,14 @@ export function InvoicesView({
 }: InvoicesViewProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "unpaid" | "paid">("all");
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<number | string | null>(null);
 
   // Form modal state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   // Sorting state
   const [sortKey, setSortKey] = useState<string | null>("issueDate");
@@ -107,127 +113,295 @@ export function InvoicesView({
   const totalAmount = filteredInvoices.reduce((sum, i) => sum + safeNumber(i.totalAmount, 0), 0);
   const totalOutstanding = filteredInvoices.reduce((sum, i) => sum + safeNumber(i.outstandingAmount, 0), 0);
 
+  // Currently selected invoice object
+  const activeSelected = currentList.find(i => i.id === selectedRowId) || null;
+
+  const handleEditSelected = () => {
+    if (activeSelected) {
+      setEditingInvoice(activeSelected);
+      setIsFormOpen(true);
+    }
+  };
+
+  const handleExportCsv = () => {
+    const headers = "Cislo;VS;Partner;Vystaveno;Splatnost;Castka;Zbyva;Stav\n";
+    const rows = filteredInvoices.map(i => 
+      `"${i.invoiceNo || i.id}";"${i.variableSymbol || ''}";"${i.customer?.name || ''}";"${safeDate(i.issueDate)}";"${safeDate(i.dueDate)}";"${i.totalAmount}";"${i.outstandingAmount}";"${i.invPaymentStatusCode}"`
+    ).join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `faktury_${activeType}_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setShowActionsMenu(false);
+  };
+
   return (
     <ErrorBoundary fallbackTitle="Chyba při zobrazení faktur">
-      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-        {/* Type Toggle & Search Controls */}
-        <div className="glass-panel" style={{ padding: "1.25rem 1.5rem" }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "1rem",
-          }}>
-            {/* Subtabs */}
-            <div style={{ display: "flex", gap: "0.5rem", background: "rgba(10, 15, 25, 0.7)", padding: "0.25rem", borderRadius: "var(--radius-md)" }}>
+      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        
+        {/* ASOL Breadcrumbs matching Screenshot 2 */}
+        <div className="asol-breadcrumb">
+          <span className="link">Dashboard</span>
+          <span className="separator">/</span>
+          <span className="link">Finance</span>
+          <span className="separator">/</span>
+          <span className="current">{activeType === "issued" ? "Faktury vydané" : "Faktury přijaté"}</span>
+        </div>
+
+        {/* ASOL Action Bar above Table matching Screenshot 2 */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+          background: "#ffffff",
+          padding: "0.75rem 1rem",
+          borderRadius: "8px",
+          border: "1px solid #cbd5e1",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+        }}>
+          {/* Left Action Buttons: [+] [✎] [Akce ▾] + Type switcher */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+            {/* New Button [+] */}
+            <button
+              onClick={() => {
+                setEditingInvoice(null);
+                setIsFormOpen(true);
+              }}
+              title={activeType === "issued" ? "Vystavit novou fakturu (+)" : "Zadat novou přijatou fakturu (+)"}
+              className="asol-btn asol-btn-icon"
+              style={{ fontWeight: 700, fontSize: "1.1rem" }}
+            >
+              <Plus size={18} />
+            </button>
+
+            {/* Edit Button [✎] */}
+            <button
+              onClick={handleEditSelected}
+              disabled={!activeSelected}
+              title={activeSelected ? `Upravit vybranou fakturu (${activeSelected.invoiceNo || activeSelected.id})` : "Vyberte fakturu v tabulce pro úpravu"}
+              className="asol-btn asol-btn-icon"
+            >
+              <Edit3 size={16} />
+            </button>
+
+            {/* Actions Dropdown [Akce ▾] */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowActionsMenu(prev => !prev)}
+                className="asol-btn"
+                style={{ gap: "0.35rem" }}
+              >
+                <span>Akce</span>
+                <ChevronDown size={14} />
+              </button>
+
+              {showActionsMenu && (
+                <div style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  marginTop: "4px",
+                  background: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                  zIndex: 20,
+                  minWidth: "180px",
+                  padding: "0.35rem 0",
+                }}>
+                  <button
+                    onClick={handleExportCsv}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      width: "100%",
+                      padding: "0.5rem 1rem",
+                      fontSize: "0.825rem",
+                      color: "#334155",
+                      textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
+                    <Download size={14} />
+                    <span>Export do CSV</span>
+                  </button>
+                  {activeSelected && (
+                    <button
+                      onClick={() => {
+                        setSelectedInvoice(activeSelected);
+                        setShowActionsMenu(false);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        width: "100%",
+                        padding: "0.5rem 1rem",
+                        fontSize: "0.825rem",
+                        color: "#334155",
+                        textAlign: "left",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      <Eye size={14} />
+                      <span>Zobrazit detail dokladu</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ width: "1px", height: "24px", background: "#cbd5e1", margin: "0 0.25rem" }} />
+
+            {/* Subtabs: Vydané / Přijaté */}
+            <div style={{ display: "flex", gap: "0.25rem" }}>
               <button
                 onClick={() => onChangeType("issued")}
-                className={`btn ${activeType === "issued" ? "btn-primary" : "btn-secondary"}`}
-                style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
+                style={{
+                  padding: "0.35rem 0.75rem",
+                  fontSize: "0.8rem",
+                  fontWeight: activeType === "issued" ? 700 : 500,
+                  borderRadius: "5px",
+                  background: activeType === "issued" ? "#e0f2fe" : "transparent",
+                  color: activeType === "issued" ? "#0284c7" : "#64748b",
+                  border: activeType === "issued" ? "1px solid #bae6fd" : "1px solid transparent",
+                }}
               >
-                <span>Vydané faktury ({invoicesIssued.length})</span>
+                Vydané ({invoicesIssued.length})
               </button>
               <button
                 onClick={() => onChangeType("received")}
-                className={`btn ${activeType === "received" ? "btn-primary" : "btn-secondary"}`}
-                style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
-              >
-                <span>Přijaté faktury ({invoicesReceived.length})</span>
-              </button>
-            </div>
-
-            {/* Search and Filters */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: "1 1 340px", maxWidth: "550px" }}>
-              <div style={{ position: "relative", flex: 1 }}>
-                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
-                <input
-                  type="text"
-                  className="input-control"
-                  style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
-                  placeholder="Hledat podle čísla, VS, odběratele..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch("")}
-                    style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                <Filter size={15} style={{ color: "var(--text-dim)" }} />
-                <select
-                  className="input-control"
-                  style={{ fontSize: "0.85rem", width: "auto" }}
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as any)}
-                >
-                  <option value="all">Všechny stavy</option>
-                  <option value="unpaid">Neuhrazené</option>
-                  <option value="paid">Uhrazené</option>
-                </select>
-              </div>
-
-              <button
-                onClick={() => {
-                  setEditingInvoice(null);
-                  setIsFormOpen(true);
+                style={{
+                  padding: "0.35rem 0.75rem",
+                  fontSize: "0.8rem",
+                  fontWeight: activeType === "received" ? 700 : 500,
+                  borderRadius: "5px",
+                  background: activeType === "received" ? "#e0f2fe" : "transparent",
+                  color: activeType === "received" ? "#0284c7" : "#64748b",
+                  border: activeType === "received" ? "1px solid #bae6fd" : "1px solid transparent",
                 }}
-                className="btn btn-primary"
-                style={{ whiteSpace: "nowrap", padding: "0.55rem 1rem", fontSize: "0.85rem", gap: "0.4rem" }}
               >
-                <Plus size={16} />
-                <span>{activeType === "issued" ? "Vystavit fakturu" : "Zadat fakturu"}</span>
+                Přijaté ({invoicesReceived.length})
               </button>
             </div>
           </div>
 
-          {/* Totals Summary */}
-          <div style={{
-            marginTop: "1.25rem",
-            paddingTop: "1rem",
-            borderTop: "1px solid var(--border-subtle)",
-            display: "flex",
-            alignItems: "center",
-            gap: "2rem",
-            fontSize: "0.85rem",
-            flexWrap: "wrap",
-          }}>
-            <div>
-              <span style={{ color: "var(--text-muted)" }}>Zobrazeno záznamů: </span>
-              <strong style={{ color: "var(--text-main)" }}>{filteredInvoices.length}</strong>
+          {/* Right Controls: Search input & Filter funnel button matching Screenshot 2 */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <div style={{ position: "relative", width: "240px" }}>
+              <Search size={15} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+              <input
+                type="text"
+                className="input-control"
+                style={{ paddingLeft: "2rem", paddingRight: "1.75rem", fontSize: "0.825rem", height: "34px" }}
+                placeholder="Hledat..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
-            <div>
-              <span style={{ color: "var(--text-muted)" }}>Fakturovaná částka: </span>
-              <strong style={{ color: "var(--brand-primary)" }}>{safeCurrency(totalAmount)}</strong>
-            </div>
-            <div>
-              <span style={{ color: "var(--text-muted)" }}>Zbývá uhradit: </span>
-              <strong style={{ color: totalOutstanding > 0 ? "var(--accent-rose)" : "var(--status-paid)" }}>
-                {safeCurrency(totalOutstanding)}
-              </strong>
+
+            {/* Filter Funnel Button [∇] */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowFilterDropdown(prev => !prev)}
+                title="Filtr stavu úhrady"
+                className="asol-btn asol-btn-icon"
+                style={{
+                  background: statusFilter !== "all" ? "#e0f2fe" : "#ffffff",
+                  color: statusFilter !== "all" ? "#0284c7" : "#334155",
+                  borderColor: statusFilter !== "all" ? "#bae6fd" : "#cbd5e1",
+                }}
+              >
+                <Filter size={16} />
+              </button>
+
+              {showFilterDropdown && (
+                <div style={{
+                  position: "absolute",
+                  top: "100%",
+                  right: 0,
+                  marginTop: "4px",
+                  background: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                  zIndex: 20,
+                  minWidth: "160px",
+                  padding: "0.4rem",
+                }}>
+                  <div style={{ fontSize: "0.725rem", fontWeight: 700, color: "#64748b", padding: "0.25rem 0.5rem", textTransform: "uppercase" }}>
+                    Stav úhrady
+                  </div>
+                  {[
+                    { val: "all", label: "Všechny doklady" },
+                    { val: "unpaid", label: "Pouze neuhrazené" },
+                    { val: "paid", label: "Pouze uhrazené" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.val}
+                      onClick={() => {
+                        setStatusFilter(opt.val as any);
+                        setShowFilterDropdown(false);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        width: "100%",
+                        padding: "0.45rem 0.65rem",
+                        fontSize: "0.825rem",
+                        borderRadius: "4px",
+                        background: statusFilter === opt.val ? "#e0f2fe" : "transparent",
+                        color: statusFilter === opt.val ? "#0284c7" : "#334155",
+                        fontWeight: statusFilter === opt.val ? 600 : 400,
+                      }}
+                    >
+                      <span>{opt.label}</span>
+                      {statusFilter === opt.val && <CheckCircle2 size={13} style={{ color: "#0284c7" }} />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Main Table with Horizontal Scroll */}
-        <div className="glass-panel" style={{ padding: "1.25rem" }}>
-          <div className="table-wrapper">
+        {/* Main Table Card */}
+        <div style={{
+          background: "#ffffff",
+          border: "1px solid #cbd5e1",
+          borderRadius: "8px",
+          overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        }}>
+          <div className="table-wrapper" style={{ border: "none", borderRadius: 0 }}>
             <table className="erp-table">
               <thead>
                 <tr>
-                  <th style={{ width: "85px", textAlign: "center" }}>Detail</th>
                   <SortableHeader
-                    label="Číslo dokladu"
+                    label="Reference / Číslo"
                     columnKey="invoiceNo"
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "160px" }}
                   />
                   <SortableHeader
                     label="Variabilní symbol"
@@ -235,27 +409,30 @@ export function InvoicesView({
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "140px" }}
                   />
                   <SortableHeader
-                    label="Partner / Klient"
+                    label="Partner / Odběratel"
                     columnKey="customer.name"
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
                   />
                   <SortableHeader
-                    label="Vystaveno"
+                    label="Datum vystavení"
                     columnKey="issueDate"
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "120px" }}
                   />
                   <SortableHeader
-                    label="Splatnost"
+                    label="Datum splatnosti"
                     columnKey="dueDate"
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "120px" }}
                   />
                   <SortableHeader
                     label="Celková částka"
@@ -263,6 +440,7 @@ export function InvoicesView({
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "140px", textAlign: "right" }}
                   />
                   <SortableHeader
                     label="Zbývá uhradit"
@@ -270,32 +448,36 @@ export function InvoicesView({
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "140px", textAlign: "right" }}
                   />
                   <SortableHeader
-                    label="Stav úhrady"
+                    label="Stav"
                     columnKey="invPaymentStatusCode"
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "110px", textAlign: "center" }}
                   />
+                  <th style={{ width: "90px", textAlign: "center" }}>Detail</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "var(--text-dim)" }}>
+                    <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b" }}>
                       Načítám faktury z Helios Nephrite...
                     </td>
                   </tr>
                 ) : sortedInvoices.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "var(--text-dim)" }}>
+                    <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b" }}>
                       Nebyly nalezeny žádné faktury odpovídající zadaným kritériím.
                     </td>
                   </tr>
                 ) : (
                   paginatedInvoices.map((inv) => {
                     const isPaid = inv.invPaymentStatusCode === "paid";
+                    const isSelected = selectedRowId === inv.id;
                     const docNum = safeString(inv.invoiceNo || inv.number, `#${inv.id}`);
                     const vs = safeString(inv.variableSymbol, "—");
                     const partner = safeString(inv.customer?.name, "Nezadáno");
@@ -303,65 +485,59 @@ export function InvoicesView({
                     const outstanding = safeNumber(inv.outstandingAmount, 0);
 
                     return (
-                      <tr key={inv.id}>
-                        {/* Detail and Edit in 1st column */}
-                        <td style={{ textAlign: "center" }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}>
-                            <button
-                              onClick={() => setSelectedInvoice(inv)}
-                              className="btn btn-secondary"
-                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
-                              title="Zobrazit detail faktury"
-                            >
-                              <Eye size={13} />
-                              <span>Detail</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingInvoice(inv);
-                                setIsFormOpen(true);
-                              }}
-                              className="btn btn-secondary"
-                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
-                              title="Upravit fakturu"
-                            >
-                              <Edit3 size={13} />
-                              <span>Upravit</span>
-                            </button>
-                          </div>
-                        </td>
-                        <td style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                      <tr 
+                        key={inv.id}
+                        className={isSelected ? "row-selected" : ""}
+                        onClick={() => setSelectedRowId(inv.id)}
+                        onDoubleClick={() => {
+                          setEditingInvoice(inv);
+                          setIsFormOpen(true);
+                        }}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <td style={{ fontWeight: 600, fontFamily: "var(--font-mono)" }}>
                           {docNum}
                         </td>
-                        <td style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                        <td style={{ fontFamily: "var(--font-mono)" }}>
                           {vs}
                         </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{partner}</div>
-                          {inv.tin && <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>IČ/DIČ: {safeString(inv.tin)}</div>}
+                          {inv.tin && <div style={{ fontSize: "0.725rem", opacity: isSelected ? 0.9 : 0.7 }}>IČ/DIČ: {safeString(inv.tin)}</div>}
                         </td>
-                        <td style={{ color: "var(--text-muted)" }}>{safeDate(inv.issueDate)}</td>
-                        <td style={{ color: !isPaid ? "var(--accent-amber)" : "var(--text-muted)", fontWeight: !isPaid ? 600 : 400 }}>
+                        <td>{safeDate(inv.issueDate)}</td>
+                        <td style={{ fontWeight: !isPaid ? 600 : 400 }}>
                           {safeDate(inv.dueDate)}
                         </td>
-                        <td style={{ fontWeight: 700 }}>
+                        <td style={{ textAlign: "right", fontWeight: 700 }}>
                           {safeCurrency(total)}
                         </td>
-                        <td style={{ fontWeight: 600, color: outstanding > 0 ? "var(--accent-rose)" : "var(--status-paid)" }}>
+                        <td style={{ textAlign: "right", fontWeight: 600 }}>
                           {safeCurrency(outstanding)}
                         </td>
-                        <td>
-                          {isPaid ? (
-                            <span className="badge badge-paid">
-                              <CheckCircle2 size={12} />
-                              <span>Uhrazeno</span>
-                            </span>
-                          ) : (
-                            <span className="badge badge-unpaid">
-                              <Clock size={12} />
-                              <span>K úhradě</span>
-                            </span>
-                          )}
+                        <td style={{ textAlign: "center" }}>
+                          <span className={`badge ${isPaid ? "badge-paid" : "badge-unpaid"}`}>
+                            {isPaid ? "Uhrazeno" : "Neuhrazeno"}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedInvoice(inv);
+                            }}
+                            className="asol-btn"
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              fontSize: "0.75rem",
+                              background: isSelected ? "rgba(255,255,255,0.2)" : "#ffffff",
+                              borderColor: isSelected ? "rgba(255,255,255,0.5)" : "#cbd5e1",
+                              color: isSelected ? "#ffffff" : "#0284c7",
+                            }}
+                            title="Zobrazit detail dokladu"
+                          >
+                            <Eye size={13} />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -371,19 +547,48 @@ export function InvoicesView({
             </table>
           </div>
 
-          <Pagination
-            currentPage={currentPage}
-            totalItems={sortedInvoices.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setCurrentPage(1);
-            }}
-          />
+          {/* Totals Summary and Pagination Bar */}
+          <div style={{
+            padding: "0.85rem 1.25rem",
+            borderTop: "1px solid #e2e8f0",
+            background: "#f8fafc",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "1rem",
+            fontSize: "0.825rem",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "1.75rem", flexWrap: "wrap" }}>
+              <div>
+                <span style={{ color: "#64748b" }}>Zobrazeno záznamů: </span>
+                <strong style={{ color: "#1e293b" }}>{filteredInvoices.length}</strong>
+              </div>
+              <div>
+                <span style={{ color: "#64748b" }}>Fakturovaná částka: </span>
+                <strong style={{ color: "#0284c7" }}>{safeCurrency(totalAmount)}</strong>
+              </div>
+              <div>
+                <span style={{ color: "#64748b" }}>Zbývá uhradit: </span>
+                <strong style={{ color: totalOutstanding > 0 ? "#dc2626" : "#16a34a" }}>
+                  {safeCurrency(totalOutstanding)}
+                </strong>
+              </div>
+            </div>
+
+            {filteredInvoices.length > pageSize && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredInvoices.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Robust Detail Modal */}
+        {/* View Detail Modal */}
         {selectedInvoice && (
           <div 
             className="modal-backdrop" 
@@ -391,182 +596,117 @@ export function InvoicesView({
               if (e.target === e.currentTarget) setSelectedInvoice(null);
             }}
           >
-            <div className="modal-dialog animate-fade-in" style={{ maxWidth: "680px", padding: "2rem" }}>
-              {/* Modal Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+            <div 
+              className="modal-dialog animate-fade-in" 
+              style={{ maxWidth: "780px", padding: "1.75rem" }}
+            >
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
                 <div>
-                  <div style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--brand-primary)", fontWeight: 700, letterSpacing: "0.05em" }}>
-                    {activeType === "issued" ? "Vydaná faktura" : "Přijatá faktura"}
+                  <div className="asol-breadcrumb" style={{ margin: 0, padding: 0, background: "transparent", border: "none" }}>
+                    <span>Faktury</span>
+                    <span className="separator">/</span>
+                    <span className="current">{selectedInvoice.invoiceNo || selectedInvoice.id}</span>
                   </div>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: 800, marginTop: "0.2rem" }}>
-                    {safeString(selectedInvoice.invoiceNo || selectedInvoice.number, `#${selectedInvoice.id}`)}
-                  </h2>
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#1e293b", marginTop: "0.25rem" }}>
+                    Detail faktury {selectedInvoice.invoiceNo || selectedInvoice.id}
+                  </h3>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <button
-                    onClick={() => {
-                      const inv = selectedInvoice;
-                      setSelectedInvoice(null);
-                      setEditingInvoice(inv);
-                      setIsFormOpen(true);
-                    }}
-                    className="btn btn-secondary"
-                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", gap: "0.35rem" }}
-                  >
-                    <Edit3 size={14} />
-                    <span>Upravit fakturu</span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedInvoice(null)}
-                    style={{
-                      width: "34px",
-                      height: "34px",
-                      borderRadius: "8px",
-                      background: "rgba(255,255,255,0.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--text-muted)",
-                    }}
-                    title="Zavřít detail"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setSelectedInvoice(null)}
+                  style={{
+                    width: "30px",
+                    height: "30px",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#64748b",
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    cursor: "pointer",
+                  }}
+                >
+                  <X size={15} />
+                </button>
               </div>
 
-              {/* Content Details */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                {/* Partner & Bank info */}
+              {/* Detail Content */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {/* 2-column partner and payment info */}
                 <div style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "1rem",
-                  background: "rgba(10, 15, 25, 0.6)",
                   padding: "1rem",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border-subtle)",
+                  background: "#f8fafc",
+                  borderRadius: "6px",
+                  border: "1px solid #e2e8f0",
                 }}>
                   <div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                      <Building size={13} />
-                      <span>Odběratel / Partner</span>
+                    <div style={{ fontSize: "0.725rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>
+                      Odběratel / Partner
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.25rem" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1e293b", marginTop: "0.25rem" }}>
                       {safeString(selectedInvoice.customer?.name, "Nezadáno")}
                     </div>
                     {selectedInvoice.tin && (
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.1rem" }}>
+                      <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "0.15rem" }}>
                         IČ/DIČ: {safeString(selectedInvoice.tin)}
                       </div>
                     )}
                   </div>
 
                   <div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                      <CreditCard size={13} />
-                      <span>Platební údaje</span>
+                    <div style={{ fontSize: "0.725rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>
+                      Platební údaje
                     </div>
-                    <div style={{ fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                    <div style={{ fontSize: "0.85rem", marginTop: "0.25rem", color: "#1e293b" }}>
                       VS: <strong style={{ fontFamily: "var(--font-mono)" }}>{safeString(selectedInvoice.variableSymbol, "—")}</strong>
                     </div>
-                    {selectedInvoice.bankAccount && (
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.1rem" }}>
-                        Účet: {safeString(selectedInvoice.bankAccount.accountNo)}/{safeString(selectedInvoice.bankAccount.bankCode)}
-                      </div>
-                    )}
+                    <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "0.15rem" }}>
+                      Způsob úhrady: {safeString(selectedInvoice.paymentType, "Převodem")}
+                    </div>
                   </div>
                 </div>
 
-                {/* Dates & Timeline */}
+                {/* Dates */}
                 <div style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(3, 1fr)",
                   gap: "0.75rem",
                   fontSize: "0.825rem",
                 }}>
-                  <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)" }}>
-                    <div style={{ color: "var(--text-dim)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                      <Calendar size={12} />
-                      <span>Datum vystavení</span>
-                    </div>
-                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{safeDate(selectedInvoice.issueDate)}</div>
+                  <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontSize: "0.725rem" }}>Datum vystavení</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b", marginTop: "0.2rem" }}>{safeDate(selectedInvoice.issueDate)}</div>
                   </div>
 
-                  <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)" }}>
-                    <div style={{ color: "var(--text-dim)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                      <Calendar size={12} />
-                      <span>Datum splatnosti</span>
-                    </div>
-                    <div style={{ fontWeight: 600, marginTop: "0.2rem", color: selectedInvoice.invPaymentStatusCode === "unpaid" ? "var(--accent-rose)" : "inherit" }}>
+                  <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontSize: "0.725rem" }}>Datum splatnosti</div>
+                    <div style={{ fontWeight: 600, color: selectedInvoice.invPaymentStatusCode === "unpaid" ? "#dc2626" : "#1e293b", marginTop: "0.2rem" }}>
                       {safeDate(selectedInvoice.dueDate)}
                     </div>
                   </div>
 
-                  <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)" }}>
-                    <div style={{ color: "var(--text-dim)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                      <Calendar size={12} />
-                      <span>DUZP</span>
-                    </div>
-                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{safeDate(selectedInvoice.vatDate)}</div>
+                  <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontSize: "0.725rem" }}>DUZP</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b", marginTop: "0.2rem" }}>{safeDate(selectedInvoice.vatDate)}</div>
                   </div>
                 </div>
 
-                {/* Job / Department metadata */}
-                {(selectedInvoice.jobOrder || selectedInvoice.department) && (
-                  <div style={{
-                    display: "flex",
-                    gap: "1.5rem",
-                    fontSize: "0.825rem",
-                    color: "var(--text-muted)",
-                    flexWrap: "wrap",
-                  }}>
-                    {selectedInvoice.jobOrder && (
-                      <div>
-                        <span>Zakázka: </span>
-                        <strong style={{ color: "var(--text-main)" }}>
-                          {safeString(selectedInvoice.jobOrder.number)} ({safeString(selectedInvoice.jobOrder.name)})
-                        </strong>
-                      </div>
-                    )}
-                    {selectedInvoice.department && (
-                      <div>
-                        <span>Středisko: </span>
-                        <strong style={{ color: "var(--text-main)" }}>
-                          {safeString(selectedInvoice.department.number)} - {safeString(selectedInvoice.department.name)}
-                        </strong>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Note */}
-                {selectedInvoice.note && typeof selectedInvoice.note === "string" && selectedInvoice.note.trim() && (
-                  <div style={{
-                    padding: "0.75rem 1rem",
-                    background: "rgba(255,255,255,0.03)",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "0.85rem",
-                    fontStyle: "italic",
-                    color: "var(--text-muted)",
-                  }}>
-                    Poznámka: {selectedInvoice.note}
-                  </div>
-                )}
-
                 {/* Amounts & Payment Status Card */}
                 <div style={{
-                  marginTop: "0.5rem",
-                  padding: "1.25rem",
-                  borderRadius: "var(--radius-md)",
-                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.05))",
-                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                  padding: "1rem 1.25rem",
+                  borderRadius: "6px",
+                  background: "#f0f9ff",
+                  border: "1px solid #bae6fd",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                 }}>
                   <div>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Stav dokladu:</div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Stav dokladu:</div>
                     <div style={{ marginTop: "0.25rem" }}>
                       {selectedInvoice.invPaymentStatusCode === "paid" ? (
                         <span className="badge badge-paid">
@@ -583,18 +723,29 @@ export function InvoicesView({
                   </div>
 
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Celkem k úhradě:</div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--brand-primary)" }}>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Celkem k úhradě:</div>
+                    <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#0284c7" }}>
                       {safeCurrency(selectedInvoice.totalAmount)}
                     </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.75rem" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
+                  <button
+                    onClick={() => {
+                      setEditingInvoice(selectedInvoice);
+                      setSelectedInvoice(null);
+                      setIsFormOpen(true);
+                    }}
+                    className="asol-btn"
+                  >
+                    <Edit3 size={14} />
+                    <span>Upravit doklad</span>
+                  </button>
                   <button
                     onClick={() => setSelectedInvoice(null)}
-                    className="btn btn-secondary"
+                    className="asol-btn"
                   >
                     Zavřít
                   </button>

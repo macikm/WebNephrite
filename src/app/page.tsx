@@ -422,87 +422,109 @@ export default function HomePage() {
           dbProfile={userInfo?.dbprofile || "Demo"}
           onRefresh={() => loadDataForTab(currentTab, true)}
           isRefreshing={isLoadingData}
+          onOpenSettings={() => handleSelectTab("settings")}
         />
 
-        <main style={{ flex: 1, padding: "2rem", overflowY: "auto" }}>
-          {currentTab === "dashboard" && (
-            <DashboardView
-              invoicesIssued={invoicesIssued}
-              invoicesReceived={invoicesReceived}
-              products={products}
-              userInfo={userInfo}
-              onNavigate={handleSelectTab}
-              isLoading={isLoadingData}
-            />
-          )}
+        <main style={{ flex: 1, padding: "1.25rem 1.5rem", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1 }}>
+            {currentTab === "dashboard" && (
+              <DashboardView
+                invoicesIssued={invoicesIssued}
+                invoicesReceived={invoicesReceived}
+                products={products}
+                userInfo={userInfo}
+                onNavigate={handleSelectTab}
+                isLoading={isLoadingData}
+              />
+            )}
 
-          {(currentTab === "invoices_issued" || currentTab === "invoices_received") && (
-            <InvoicesView
-              invoicesIssued={invoicesIssued}
-              invoicesReceived={invoicesReceived}
-              activeType={invoiceSubtype}
-              onChangeType={(type) => {
-                setInvoiceSubtype(type);
-                setCurrentTab(type === "issued" ? "invoices_issued" : "invoices_received");
-              }}
-              isLoading={isLoadingData}
-              customers={customers}
-              products={products}
-              onSaveInvoice={handleSaveInvoice}
-            />
-          )}
+            {(currentTab === "invoices_issued" || currentTab === "invoices_received") && (
+              <InvoicesView
+                invoicesIssued={invoicesIssued}
+                invoicesReceived={invoicesReceived}
+                activeType={invoiceSubtype}
+                onChangeType={(type) => {
+                  setInvoiceSubtype(type);
+                  setCurrentTab(type === "issued" ? "invoices_issued" : "invoices_received");
+                }}
+                isLoading={isLoadingData}
+                customers={customers}
+                products={products}
+                onSaveInvoice={handleSaveInvoice}
+              />
+            )}
 
-          {currentTab === "products" && (
-            <ProductsView
-              products={products}
-              isLoading={isLoadingData}
-              onSaveProduct={handleSaveProduct}
-            />
-          )}
+            {currentTab === "products" && (
+              <ProductsView
+                products={products}
+                isLoading={isLoadingData}
+                onSaveProduct={handleSaveProduct}
+              />
+            )}
 
-          {currentTab === "orders" && (
-            <OrdersView
-              ordersReceived={ordersReceived}
-              ordersIssued={ordersIssued}
-              isLoading={isLoadingData}
-              customers={customers}
-              products={products}
-              onSaveOrder={handleSaveOrder}
-            />
-          )}
+            {currentTab === "orders" && (
+              <OrdersView
+                ordersReceived={ordersReceived}
+                ordersIssued={ordersIssued}
+                isLoading={isLoadingData}
+                customers={customers}
+                products={products}
+                onSaveOrder={handleSaveOrder}
+              />
+            )}
 
-          {currentTab === "customers" && (
-            <CustomersView
-              customers={customers}
-              contacts={contacts}
-              isLoading={isLoadingData}
-              onSaveCustomer={handleSaveCustomer}
-              onSaveContact={handleSaveContact}
-            />
-          )}
+            {currentTab === "customers" && (
+              <CustomersView
+                customers={customers}
+                contacts={contacts}
+                isLoading={isLoadingData}
+                onSaveCustomer={handleSaveCustomer}
+                onSaveContact={handleSaveContact}
+              />
+            )}
 
-          {currentTab === "jobs" && (
-            <JobsView
-              jobOrders={jobOrders}
-              tasks={tasks}
-              isLoading={isLoadingData}
-              customers={customers}
-              onSaveJob={handleSaveJob}
-              onSaveTask={handleSaveTask}
-            />
-          )}
+            {currentTab === "jobs" && (
+              <JobsView
+                jobOrders={jobOrders}
+                tasks={tasks}
+                isLoading={isLoadingData}
+                customers={customers}
+                onSaveJob={handleSaveJob}
+                onSaveTask={handleSaveTask}
+              />
+            )}
 
-          {currentTab === "documents" && (
-            <DocumentsView
-              documents={documents}
-              isLoading={isLoadingData}
-              onSaveDocument={handleSaveDocument}
-            />
-          )}
+            {currentTab === "documents" && (
+              <DocumentsView
+                documents={documents}
+                isLoading={isLoadingData}
+                onSaveDocument={handleSaveDocument}
+              />
+            )}
 
-          {currentTab === "settings" && (
-            <SettingsView userInfo={userInfo} />
-          )}
+            {currentTab === "settings" && (
+              <SettingsView userInfo={userInfo} />
+            )}
+          </div>
+
+          {/* ASOL Footer matching Screenshot 2, 3, 4 */}
+          <footer style={{
+            marginTop: "1.5rem",
+            paddingTop: "0.85rem",
+            borderTop: "1px solid #e2e8f0",
+            fontSize: "0.725rem",
+            color: "#64748b",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}>
+            <div>© 2026 - Asseco Solutions, a.s.</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "#94a3b8" }}>
+              Debug režim: Aktivní Zařízení: Desktop Platforma: Win32 | Verze: 48.2.3.0 Helios: open.helios.eu | Profil: <strong style={{ color: "#0284c7" }}>{userInfo?.dbprofile || "Demo"}</strong> | Uživatel: <strong style={{ color: "#334155" }}>{userInfo?.userName || "Martin Macko"}</strong>
+            </div>
+          </footer>
         </main>
       </div>
 

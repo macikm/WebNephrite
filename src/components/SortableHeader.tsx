@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 import { SortDirection } from "@/lib/table-utils";
 
 interface SortableHeaderProps {
@@ -28,24 +28,27 @@ export function SortableHeader({
       style={{
         cursor: "pointer",
         userSelect: "none",
-        transition: "color 0.15s ease, background-color 0.15s ease",
-        color: isSorted ? "var(--brand-primary)" : "var(--text-muted)",
+        transition: "all 0.12s ease",
+        color: isSorted ? "#0284c7" : "#334155",
+        background: isSorted ? "#f0f9ff" : undefined,
         whiteSpace: "nowrap",
         ...style,
       }}
-      title={`Klikněte pro řazení podle: ${label}`}
+      title={`Klikněte pro řazení / filtr podle: ${label}`}
     >
-      <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+      <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "0.5rem" }}>
         <span>{label}</span>
-        {isSorted ? (
-          sortDirection === "asc" ? (
-            <ArrowUp size={13} style={{ color: "var(--brand-primary)" }} />
+        <span style={{ display: "inline-flex", alignItems: "center" }}>
+          {isSorted ? (
+            sortDirection === "asc" ? (
+              <ArrowUp size={12} style={{ color: "#0284c7" }} />
+            ) : (
+              <ArrowDown size={12} style={{ color: "#0284c7" }} />
+            )
           ) : (
-            <ArrowDown size={13} style={{ color: "var(--brand-primary)" }} />
-          )
-        ) : (
-          <ArrowUpDown size={12} style={{ opacity: 0.35 }} />
-        )}
+            <span style={{ fontSize: "0.65rem", color: "#64748b", opacity: 0.65 }}>▼</span>
+          )}
+        </span>
       </div>
     </th>
   );

@@ -9,12 +9,17 @@ import {
   Clock, 
   CheckCircle2, 
   AlertTriangle,
-  Server,
-  Layers,
-  ExternalLink
+  Briefcase,
+  FolderArchive,
+  RefreshCw,
+  ChevronsRight,
+  ExternalLink,
+  Plus,
+  BookOpen
 } from "lucide-react";
 import { Invoice, Product, UserInfo } from "@/types/helios";
 import { TabId } from "./Sidebar";
+import { safeCurrency, safeDate, safeNumber, safeString } from "@/lib/table-utils";
 
 interface DashboardProps {
   invoicesIssued: Invoice[];
@@ -38,346 +43,381 @@ export function DashboardView({
   const issuedTotal = invoicesIssued.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
   const unpaidIssuedCount = invoicesIssued.filter(i => i.invPaymentStatusCode === "unpaid").length;
 
-  const receivedOutstanding = invoicesReceived.reduce((sum, inv) => sum + (Number(inv.outstandingAmount) || 0), 0);
+  // Worklist items (e.g. recent invoices to review or pay)
+  const worklistItems = [...invoicesIssued].slice(0, 8);
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK", maximumFractionDigits: 0 }).format(val);
-  };
-
-  const recentInvoices = [...invoicesIssued].slice(0, 6);
+  const tiles = [
+    {
+      id: "invoices_issued",
+      title: "Faktury vydané",
+      subtitle: `${invoicesIssued.length} dokladů`,
+      hasAdd: true,
+      bg: "linear-gradient(135deg, #1e3a8a, #0284c7)",
+      tab: "invoices_issued" as TabId,
+    },
+    {
+      id: "orders",
+      title: "Objednávky",
+      subtitle: "Nákup a prodej",
+      hasAdd: true,
+      bg: "linear-gradient(135deg, #0f766e, #0d9488)",
+      tab: "orders" as TabId,
+    },
+    {
+      id: "products",
+      title: "Sklad a produkty",
+      subtitle: `${products.length} položek v ceníku`,
+      hasAdd: false,
+      bg: "linear-gradient(135deg, #374151, #4b5563)",
+      tab: "products" as TabId,
+    },
+    {
+      id: "customers",
+      title: "Zákazníci & Partneři",
+      subtitle: "Adresář CRM",
+      hasAdd: false,
+      bg: "linear-gradient(135deg, #1e293b, #334155)",
+      tab: "customers" as TabId,
+    },
+    {
+      id: "jobs",
+      title: "Zakázky & Úkoly",
+      subtitle: "Plnění a realizace",
+      hasAdd: true,
+      bg: "linear-gradient(135deg, #065f46, #059669)",
+      tab: "jobs" as TabId,
+    },
+    {
+      id: "invoices_received",
+      title: "Faktury přijaté",
+      subtitle: `${invoicesReceived.length} dokladů`,
+      hasAdd: false,
+      bg: "linear-gradient(135deg, #831843, #be185d)",
+      tab: "invoices_received" as TabId,
+    },
+    {
+      id: "documents",
+      title: "DMS Dokumenty",
+      subtitle: "Archiv a přílohy",
+      hasAdd: false,
+      bg: "linear-gradient(135deg, #431407, #9a3412)",
+      tab: "documents" as TabId,
+    },
+    {
+      id: "settings",
+      title: "Systém & Helios API",
+      subtitle: "Konfigurace & logy",
+      hasAdd: false,
+      bg: "linear-gradient(135deg, #1e1b4b, #4338ca)",
+      tab: "settings" as TabId,
+    },
+  ];
 
   return (
-    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
-      {/* Welcome Banner */}
-      <div className="glass-panel glow-effect" style={{
-        padding: "1.75rem 2rem",
-        background: "linear-gradient(135deg, rgba(22, 30, 46, 0.9), rgba(16, 185, 129, 0.08))",
-        borderLeft: "4px solid var(--brand-primary)",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: "1.25rem",
-      }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
-            <span style={{
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "var(--brand-primary)",
-            }}>
-              HELIOS NEPHRITE CLOUD ERP
-            </span>
-          </div>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
-            Vítejte v systému, {userInfo?.userName || "uživateli"}
-          </h1>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginTop: "0.3rem" }}>
-            Databázový profil: <strong style={{ color: "var(--accent-cyan)" }}>{userInfo?.dbprofile || "Demo"}</strong> • 
-            Aktivní období: <strong>2026</strong> • Server: <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>open.helios.eu</span>
-          </p>
-        </div>
-
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <button
-            onClick={() => onNavigate("invoices_issued")}
-            className="btn btn-primary"
-          >
-            <span>Vydané faktury</span>
-            <ArrowUpRight size={16} />
-          </button>
-          <button
-            onClick={() => onNavigate("products")}
-            className="btn btn-secondary"
-          >
-            <span>Katalog produktů</span>
-          </button>
-        </div>
+    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {/* Centered Big Heading matching Screenshot 1 */}
+      <div style={{ textAlign: "center", margin: "0.25rem 0 0.5rem" }}>
+        <h1 style={{ fontSize: "2rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em" }}>
+          ASOL Portál
+        </h1>
       </div>
 
-      {/* KPI Cards Grid */}
+      {/* Asseco Learning / Helios modern Banner matching Screenshot 1 */}
+      <div style={{
+        background: "linear-gradient(90deg, #043657 0%, #035284 35%, #0284c7 100%)",
+        borderRadius: "10px",
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "1.25rem 2rem",
+        color: "#ffffff",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+        flexWrap: "wrap",
+        gap: "1.5rem",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+          <div style={{
+            width: "56px",
+            height: "56px",
+            borderRadius: "10px",
+            background: "rgba(255, 255, 255, 0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.25)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#ffffff",
+            flexShrink: 0,
+          }}>
+            <BookOpen size={28} />
+          </div>
+          <div>
+            <div style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+              Asseco Learning
+            </div>
+            <div style={{ fontSize: "0.95rem", opacity: 0.9, marginTop: "0.2rem" }}>
+              Nový vzdělávací portál a Helios Nephrite integrace pro zaměstnance
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigate("invoices_issued")}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.6rem 1.25rem",
+            borderRadius: "9999px",
+            background: "#ffffff",
+            color: "#035284",
+            fontSize: "0.9rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.2)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "none";
+            e.currentTarget.style.boxShadow = "0 2px 5px rgba(0,0,0,0.15)";
+          }}
+        >
+          <span>Přejít k dokladům</span>
+          <ArrowUpRight size={16} />
+        </button>
+      </div>
+
+      {/* Grid of 8 Quick Action Tiles matching Screenshot 1 */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-        gap: "1.25rem",
+        gap: "0.85rem",
       }}>
-        {/* KPI 1: Neuhrazené pohledávky */}
-        <div className="glass-panel kpi-card" onClick={() => onNavigate("invoices_issued")} style={{ cursor: "pointer" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Neuhrazené pohledávky
-            </span>
-            <div style={{
-              width: "32px",
-              height: "32px",
+        {tiles.map((tile) => (
+          <div
+            key={tile.id}
+            onClick={() => onNavigate(tile.tab)}
+            style={{
+              position: "relative",
+              height: "85px",
               borderRadius: "8px",
-              background: "rgba(244, 63, 94, 0.15)",
-              color: "var(--accent-rose)",
+              background: tile.bg,
+              padding: "1rem 1.25rem",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
-              <AlertTriangle size={18} />
-            </div>
-          </div>
-          <div className="kpi-val" style={{ color: unpaidIssuedCount > 0 ? "var(--accent-rose)" : "var(--status-paid)" }}>
-            {isLoading ? "..." : formatCurrency(issuedOutstanding)}
-          </div>
-          <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-            {unpaidIssuedCount} neuhrazených faktur vydaných
-          </div>
-        </div>
+              alignItems: "flex-end",
+              cursor: "pointer",
+              overflow: "hidden",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
+            }}
+          >
+            {/* Dark gradient overlay for readability */}
+            <div style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.6) 100%)",
+              zIndex: 1,
+            }} />
 
-        {/* KPI 2: Celkový obrat (Vydané) */}
-        <div className="glass-panel kpi-card" onClick={() => onNavigate("invoices_issued")} style={{ cursor: "pointer" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Celkem vyfakturováno
-            </span>
             <div style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              background: "rgba(16, 185, 129, 0.15)",
-              color: "var(--status-paid)",
+              position: "relative",
+              zIndex: 2,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              color: "#ffffff",
             }}>
-              <FileText size={18} />
-            </div>
-          </div>
-          <div className="kpi-val" style={{ color: "var(--brand-primary)" }}>
-            {isLoading ? "..." : formatCurrency(issuedTotal)}
-          </div>
-          <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-            {invoicesIssued.length} evidovaných faktur
-          </div>
-        </div>
+              <div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>
+                  {tile.title}
+                </div>
+                <div style={{ fontSize: "0.75rem", opacity: 0.85, textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>
+                  {tile.subtitle}
+                </div>
+              </div>
 
-        {/* KPI 3: Závazky (Přijaté) */}
-        <div className="glass-panel kpi-card" onClick={() => onNavigate("invoices_received")} style={{ cursor: "pointer" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Závazky k úhradě
-            </span>
-            <div style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              background: "rgba(245, 158, 11, 0.15)",
-              color: "var(--accent-amber)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
-              <Receipt size={18} />
+              {tile.hasAdd && (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.2rem",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  background: "rgba(255,255,255,0.2)",
+                  padding: "0.2rem 0.5rem",
+                  borderRadius: "4px",
+                }}>
+                  <span>Přejít</span>
+                  <span>➔</span>
+                </div>
+              )}
             </div>
           </div>
-          <div className="kpi-val" style={{ color: "var(--accent-amber)" }}>
-            {isLoading ? "..." : formatCurrency(receivedOutstanding)}
-          </div>
-          <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-            Faktury od dodavatelů
-          </div>
-        </div>
-
-        {/* KPI 4: Položky skladu */}
-        <div className="glass-panel kpi-card" onClick={() => onNavigate("products")} style={{ cursor: "pointer" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Položky v katalogu
-            </span>
-            <div style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              background: "rgba(59, 130, 246, 0.15)",
-              color: "var(--accent-blue)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
-              <Package size={18} />
-            </div>
-          </div>
-          <div className="kpi-val" style={{ color: "var(--accent-blue)" }}>
-            {isLoading ? "..." : products.length}
-          </div>
-          <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-            Aktivní produkty v Nephrite
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Main Grid: Recent Invoices & System Status */}
+      {/* ASOL "Worklist" Card & Table Widget matching Screenshot 1 */}
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "2fr 1fr",
-        gap: "1.5rem",
+        background: "#ffffff",
+        border: "1px solid #cbd5e1",
+        borderRadius: "8px",
+        overflow: "hidden",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
       }}>
-        {/* Recent Invoices Table */}
-        <div className="glass-panel" style={{ padding: "1.5rem" }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1.25rem",
-          }}>
-            <div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Poslední vydané faktury</h3>
-              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>
-                Přehled realizovaných faktur a stav jejich úhrady
-              </p>
-            </div>
+        {/* Worklist Header */}
+        <div style={{
+          padding: "0.75rem 1.25rem",
+          borderBottom: "1px solid #e2e8f0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: "#ffffff",
+        }}>
+          <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1e293b" }}>
+            Worklist (Poslední otevřené doklady)
+          </h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <button
               onClick={() => onNavigate("invoices_issued")}
+              title="Obnovit data"
               style={{
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                color: "var(--brand-primary)",
                 display: "flex",
                 alignItems: "center",
-                gap: "0.3rem",
+                justifyContent: "center",
+                width: "28px",
+                height: "28px",
+                borderRadius: "4px",
+                color: "#64748b",
+                cursor: "pointer",
               }}
             >
-              <span>Všechny faktury</span>
-              <ArrowUpRight size={14} />
+              <RefreshCw size={14} />
             </button>
-          </div>
-
-          <div className="table-wrapper">
-            <table className="erp-table">
-              <thead>
-                <tr>
-                  <th>Číslo / Doklad</th>
-                  <th>Odběratel</th>
-                  <th>Datum splatnosti</th>
-                  <th>Částka</th>
-                  <th>Stav</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentInvoices.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} style={{ textAlign: "center", padding: "2rem", color: "var(--text-dim)" }}>
-                      {isLoading ? "Načítám faktury z Heliosu..." : "Žádné faktury k zobrazení"}
-                    </td>
-                  </tr>
-                ) : (
-                  recentInvoices.map((inv) => (
-                    <tr key={inv.id}>
-                      <td style={{ fontWeight: 600, fontFamily: "var(--font-mono)" }}>
-                        {inv.invoiceNo || inv.number}
-                      </td>
-                      <td>{inv.customer?.name || "Nezadáno"}</td>
-                      <td style={{ color: "var(--text-muted)" }}>
-                        {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("cs-CZ") : "—"}
-                      </td>
-                      <td style={{ fontWeight: 700 }}>
-                        {formatCurrency(inv.totalAmount)}
-                      </td>
-                      <td>
-                        {inv.invPaymentStatusCode === "paid" ? (
-                          <span className="badge badge-paid">
-                            <CheckCircle2 size={12} />
-                            <span>Uhrazeno</span>
-                          </span>
-                        ) : (
-                          <span className="badge badge-unpaid">
-                            <Clock size={12} />
-                            <span>K úhradě</span>
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <button
+              onClick={() => onNavigate("invoices_issued")}
+              title="Zobrazit všechny doklady"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "28px",
+                height: "28px",
+                borderRadius: "4px",
+                color: "#64748b",
+                cursor: "pointer",
+              }}
+            >
+              <ChevronsRight size={16} />
+            </button>
           </div>
         </div>
 
-        {/* Quick Links & Server Information */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {/* Quick Actions Panel */}
-          <div className="glass-panel" style={{ padding: "1.5rem" }}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1rem" }}>
-              Rychlá navigace v ERP
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              <button
-                onClick={() => onNavigate("orders")}
-                className="btn btn-secondary"
-                style={{ justifyContent: "flex-start", padding: "0.65rem 0.9rem" }}
-              >
-                <Layers size={16} style={{ color: "var(--accent-cyan)" }} />
-                <span>Přijaté & vydané objednávky</span>
-              </button>
-              <button
-                onClick={() => onNavigate("customers")}
-                className="btn btn-secondary"
-                style={{ justifyContent: "flex-start", padding: "0.65rem 0.9rem" }}
-              >
-                <Users size={16} style={{ color: "var(--accent-purple)" }} />
-                <span>Adresář zákazníků a partnerů</span>
-              </button>
-              <button
-                onClick={() => onNavigate("jobs")}
-                className="btn btn-secondary"
-                style={{ justifyContent: "flex-start", padding: "0.65rem 0.9rem" }}
-              >
-                <FileText size={16} style={{ color: "var(--accent-amber)" }} />
-                <span>Zakázky a realizace úkolů</span>
-              </button>
-              <button
-                onClick={() => onNavigate("settings")}
-                className="btn btn-secondary"
-                style={{ justifyContent: "flex-start", padding: "0.65rem 0.9rem" }}
-              >
-                <Server size={16} style={{ color: "var(--brand-primary)" }} />
-                <span>API diagnostika & Swagger</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Connected Server Card */}
-          <div className="glass-panel" style={{ padding: "1.5rem" }}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Server size={16} style={{ color: "var(--brand-primary)" }} />
-              <span>Stav Helios konektoru</span>
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", fontSize: "0.825rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "var(--text-muted)" }}>Protokol:</span>
-                <span style={{ fontWeight: 600 }}>Web.API v8.0 ServiceGate</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "var(--text-muted)" }}>Autentizace:</span>
-                <span className="badge badge-paid" style={{ padding: "0.15rem 0.5rem" }}>Aktivní session</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "var(--text-muted)" }}>Swagger Docs:</span>
-                <a
-                  href="https://demo-api.helios.eu/docs/index.html"
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    color: "var(--accent-cyan)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.25rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  <span>Otevřít dokumentaci</span>
-                  <ExternalLink size={12} />
-                </a>
-              </div>
-            </div>
-          </div>
+        {/* Worklist Table matching Screenshot 1 */}
+        <div className="table-wrapper" style={{ border: "none", borderRadius: 0 }}>
+          <table className="erp-table">
+            <thead>
+              <tr>
+                <th style={{ width: "160px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Číslo dokladu</span>
+                    <span style={{ fontSize: "0.65rem", color: "#64748b" }}>▼</span>
+                  </div>
+                </th>
+                <th>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Název partnera</span>
+                    <span style={{ fontSize: "0.65rem", color: "#64748b" }}>▼</span>
+                  </div>
+                </th>
+                <th style={{ width: "130px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Reference / VS</span>
+                    <span style={{ fontSize: "0.65rem", color: "#64748b" }}>▼</span>
+                  </div>
+                </th>
+                <th style={{ width: "130px", textAlign: "right" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Částka</span>
+                    <span style={{ fontSize: "0.65rem", color: "#64748b" }}>▼</span>
+                  </div>
+                </th>
+                <th style={{ width: "110px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Vystaveno</span>
+                    <span style={{ fontSize: "0.65rem", color: "#64748b" }}>▼</span>
+                  </div>
+                </th>
+                <th style={{ width: "110px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Splatnost</span>
+                    <span style={{ fontSize: "0.65rem", color: "#64748b" }}>▼</span>
+                  </div>
+                </th>
+                <th style={{ width: "100px", textAlign: "center" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Stav</span>
+                    <span style={{ fontSize: "0.65rem", color: "#64748b" }}>▼</span>
+                  </div>
+                </th>
+                <th style={{ width: "80px", textAlign: "center" }}>
+                  <span>Otevřít</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {worklistItems.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}>
+                    Nejsou žádné další položky
+                  </td>
+                </tr>
+              ) : (
+                worklistItems.map((inv) => {
+                  const isPaid = inv.invPaymentStatusCode === "paid";
+                  return (
+                    <tr
+                      key={inv.id}
+                      onClick={() => onNavigate("invoices_issued")}
+                    >
+                      <td style={{ fontWeight: 600, color: "#0284c7" }}>
+                        {inv.invoiceNo || inv.number || `#${inv.id}`}
+                      </td>
+                      <td>{safeString(inv.customer?.name, "Bez partnera")}</td>
+                      <td>{safeString(inv.variableSymbol, "—")}</td>
+                      <td style={{ textAlign: "right", fontWeight: 600 }}>
+                        {safeCurrency(inv.totalAmount)}
+                      </td>
+                      <td>{safeDate(inv.issueDate)}</td>
+                      <td>{safeDate(inv.dueDate)}</td>
+                      <td style={{ textAlign: "center" }}>
+                        <span className={`badge ${isPaid ? "badge-paid" : "badge-unpaid"}`}>
+                          {isPaid ? "Uhrazeno" : "Neuhrazeno"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <span style={{ color: "#0284c7", fontSize: "0.8rem", fontWeight: 600 }}>
+                          Detail ➔
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

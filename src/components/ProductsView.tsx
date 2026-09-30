@@ -73,9 +73,18 @@ export function ProductsView({ products, isLoading, onSaveProduct }: ProductsVie
 
   return (
     <ErrorBoundary fallbackTitle="Chyba při zobrazení produktů">
-      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {/* ASOL Breadcrumbs */}
+        <div className="asol-breadcrumb">
+          <span className="link">Dashboard</span>
+          <span className="separator">/</span>
+          <span className="link">Obchod</span>
+          <span className="separator">/</span>
+          <span className="current">Katalog produktů & Sklad</span>
+        </div>
+
         {/* Header filter & search */}
-        <div className="glass-panel" style={{ padding: "1.25rem 1.5rem" }}>
+        <div className="glass-panel" style={{ padding: "0.85rem 1.25rem" }}>
           <div style={{
             display: "flex",
             justifyContent: "space-between",
@@ -84,19 +93,19 @@ export function ProductsView({ products, isLoading, onSaveProduct }: ProductsVie
             gap: "1rem",
           }}>
             <div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Katalog zboží a služeb</h3>
-              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>
+              <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#1e293b" }}>Katalog zboží a služeb</h3>
+              <p style={{ fontSize: "0.775rem", color: "#64748b", marginTop: "0.15rem" }}>
                 Ceníky, měrné jednotky a sazby DPH z Helios Nephrite
               </p>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: "1 1 320px", maxWidth: "600px" }}>
               <div style={{ position: "relative", flex: 1 }}>
-                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+                <Search size={15} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
                 <input
                   type="text"
                   className="input-control"
-                  style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
+                  style={{ paddingLeft: "2rem", paddingRight: "1.75rem", fontSize: "0.825rem", height: "34px" }}
                   placeholder="Hledat zboží podle názvu, kódu nebo EAN..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -330,18 +339,20 @@ export function ProductsView({ products, isLoading, onSaveProduct }: ProductsVie
                   <button
                     onClick={() => setSelectedProduct(null)}
                     style={{
-                      width: "34px",
-                      height: "34px",
-                      borderRadius: "8px",
-                      background: "rgba(255,255,255,0.08)",
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "6px",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: "var(--text-muted)",
+                      color: "#64748b",
+                      cursor: "pointer",
                     }}
                     title="Zavřít"
                   >
-                    <X size={18} />
+                    <X size={15} />
                   </button>
                 </div>
               </div>
@@ -351,10 +362,10 @@ export function ProductsView({ products, isLoading, onSaveProduct }: ProductsVie
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "1rem",
-                  background: "rgba(10, 15, 25, 0.6)",
+                  background: "#f8fafc",
                   padding: "1rem",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  border: "1px solid #e2e8f0",
                 }}>
                   <div>
                     <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Referenční kód:</div>

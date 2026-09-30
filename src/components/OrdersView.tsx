@@ -2,7 +2,18 @@
 
 import { useState } from "react";
 import { Order, Customer, Product } from "@/types/helios";
-import { Search, ShoppingCart, Clock, CheckCircle2, Eye, X, Building, Calendar, Plus, Edit3 } from "lucide-react";
+import { 
+  Search, 
+  ShoppingCart, 
+  Eye, 
+  Calendar, 
+  Building, 
+  X, 
+  Plus, 
+  Edit3,
+  ChevronDown,
+  Download
+} from "lucide-react";
 import { SortableHeader } from "./SortableHeader";
 import { Pagination } from "./Pagination";
 import { OrderFormModal } from "./forms/OrderFormModal";
@@ -18,9 +29,9 @@ interface OrdersViewProps {
   onSaveOrder?: (order: Order) => void;
 }
 
-export function OrdersView({ 
-  ordersReceived, 
-  ordersIssued, 
+export function OrdersView({
+  ordersReceived,
+  ordersIssued,
   isLoading,
   customers = [],
   products = [],
@@ -29,8 +40,10 @@ export function OrdersView({
   const [subType, setSubType] = useState<"received" | "issued">("received");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<number | string | null>(null);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
-  // Form modal state
+  // Form modal
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
@@ -46,7 +59,7 @@ export function OrdersView({
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
-      setSortDirection(prev => (prev === "asc" ? "desc" : "asc"));
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
       setSortDirection("asc");
@@ -68,70 +81,200 @@ export function OrdersView({
     currentPage * pageSize
   );
 
+  const activeSelected = currentList.find(o => o.id === selectedRowId) || null;
+
+  const handleEditSelected = () => {
+    if (activeSelected) {
+      setEditingOrder(activeSelected);
+      setIsFormOpen(true);
+    }
+  };
+
+  const handleExportCsv = () => {
+    const headers = "Cislo;Partner;Datum;Termin;Castka;Stav\n";
+    const rows = filtered.map(o => 
+      `"${o.orderNumber || o.number || o.id}";"${o.customer?.name || o.customerName || ''}";"${safeDate(o.orderDate)}";"${safeDate(o.deliveryDate)}";"${o.totalAmount || 0}";"${o.status || ''}"`
+    ).join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `objednavky_${subType}_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setShowActionsMenu(false);
+  };
+
   return (
     <ErrorBoundary fallbackTitle="Chyba při zobrazení objednávek">
-      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-        <div className="glass-panel" style={{ padding: "1.25rem 1.5rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-            {/* Subtype toggle */}
-            <div style={{ display: "flex", gap: "0.5rem", background: "rgba(10, 15, 25, 0.7)", padding: "0.25rem", borderRadius: "var(--radius-md)" }}>
+      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        
+        {/* ASOL Breadcrumbs matching Screenshot 2 */}
+        <div className="asol-breadcrumb">
+          <span className="link">Dashboard</span>
+          <span className="separator">/</span>
+          <span className="link">Obchod</span>
+          <span className="separator">/</span>
+          <span className="current">{subType === "received" ? "Objednávky přijaté" : "Objednávky vydané"}</span>
+        </div>
+
+        {/* ASOL Action Bar above Table matching Screenshot 2 */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+          background: "#ffffff",
+          padding: "0.75rem 1rem",
+          borderRadius: "8px",
+          border: "1px solid #cbd5e1",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+        }}>
+          {/* Left Action Buttons: [+] [✎] [Akce ▾] + Type switcher */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+            <button
+              onClick={() => {
+                setEditingOrder(null);
+                setIsFormOpen(true);
+              }}
+              title={subType === "received" ? "Nová přijatá objednávka (+)" : "Nová vydaná objednávka (+)"}
+              className="asol-btn asol-btn-icon"
+            >
+              <Plus size={18} />
+            </button>
+
+            <button
+              onClick={handleEditSelected}
+              disabled={!activeSelected}
+              title={activeSelected ? `Upravit vybranou objednávku` : "Vyberte objednávku v tabulce pro úpravu"}
+              className="asol-btn asol-btn-icon"
+            >
+              <Edit3 size={16} />
+            </button>
+
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowActionsMenu(prev => !prev)}
+                className="asol-btn"
+                style={{ gap: "0.35rem" }}
+              >
+                <span>Akce</span>
+                <ChevronDown size={14} />
+              </button>
+
+              {showActionsMenu && (
+                <div style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  marginTop: "4px",
+                  background: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                  zIndex: 20,
+                  minWidth: "180px",
+                  padding: "0.35rem 0",
+                }}>
+                  <button
+                    onClick={handleExportCsv}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      width: "100%",
+                      padding: "0.5rem 1rem",
+                      fontSize: "0.825rem",
+                      color: "#334155",
+                      textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
+                    <Download size={14} />
+                    <span>Export do CSV</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div style={{ width: "1px", height: "24px", background: "#cbd5e1", margin: "0 0.25rem" }} />
+
+            <div style={{ display: "flex", gap: "0.25rem" }}>
               <button
                 onClick={() => { setSubType("received"); setSortKey("orderDate"); setCurrentPage(1); }}
-                className={`btn ${subType === "received" ? "btn-primary" : "btn-secondary"}`}
-                style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
+                style={{
+                  padding: "0.35rem 0.75rem",
+                  fontSize: "0.8rem",
+                  fontWeight: subType === "received" ? 700 : 500,
+                  borderRadius: "5px",
+                  background: subType === "received" ? "#e0f2fe" : "transparent",
+                  color: subType === "received" ? "#0284c7" : "#64748b",
+                  border: subType === "received" ? "1px solid #bae6fd" : "1px solid transparent",
+                }}
               >
-                <span>Přijaté objednávky ({ordersReceived.length})</span>
+                Přijaté ({ordersReceived.length})
               </button>
               <button
                 onClick={() => { setSubType("issued"); setSortKey("orderDate"); setCurrentPage(1); }}
-                className={`btn ${subType === "issued" ? "btn-primary" : "btn-secondary"}`}
-                style={{ padding: "0.45rem 1rem", fontSize: "0.85rem" }}
-              >
-                <span>Vydané objednávky ({ordersIssued.length})</span>
-              </button>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: "1 1 300px", maxWidth: "600px" }}>
-              <div style={{ position: "relative", flex: 1 }}>
-                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
-                <input
-                  type="text"
-                  className="input-control"
-                  style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
-                  placeholder="Hledat podle čísla objednávky nebo partnera..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-
-              <button
-                onClick={() => {
-                  setEditingOrder(null);
-                  setIsFormOpen(true);
+                style={{
+                  padding: "0.35rem 0.75rem",
+                  fontSize: "0.8rem",
+                  fontWeight: subType === "issued" ? 700 : 500,
+                  borderRadius: "5px",
+                  background: subType === "issued" ? "#e0f2fe" : "transparent",
+                  color: subType === "issued" ? "#0284c7" : "#64748b",
+                  border: subType === "issued" ? "1px solid #bae6fd" : "1px solid transparent",
                 }}
-                className="btn btn-primary"
-                style={{ whiteSpace: "nowrap", padding: "0.55rem 1rem", fontSize: "0.85rem", gap: "0.4rem" }}
               >
-                <Plus size={16} />
-                <span>{subType === "received" ? "Vytvořit objednávku" : "Vydat objednávku"}</span>
+                Vydané ({ordersIssued.length})
               </button>
             </div>
           </div>
+
+          {/* Search input */}
+          <div style={{ position: "relative", width: "260px" }}>
+            <Search size={15} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+            <input
+              type="text"
+              className="input-control"
+              style={{ paddingLeft: "2rem", paddingRight: "1.75rem", fontSize: "0.825rem", height: "34px" }}
+              placeholder="Hledat objednávku nebo partnera..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Table with horizontal scroll */}
-        <div className="glass-panel" style={{ padding: "1.25rem" }}>
-          <div className="table-wrapper">
+        {/* Main Table Card */}
+        <div style={{
+          background: "#ffffff",
+          border: "1px solid #cbd5e1",
+          borderRadius: "8px",
+          overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        }}>
+          <div className="table-wrapper" style={{ border: "none", borderRadius: 0 }}>
             <table className="erp-table">
               <thead>
                 <tr>
-                  <th style={{ width: "85px", textAlign: "center" }}>Detail</th>
                   <SortableHeader
                     label="Číslo objednávky"
                     columnKey="orderNumber"
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "160px" }}
                   />
                   <SortableHeader
                     label="Klient / Partner"
@@ -141,11 +284,12 @@ export function OrdersView({
                     onSort={handleSort}
                   />
                   <SortableHeader
-                    label="Datum vystavení"
+                    label="Datum objednání"
                     columnKey="orderDate"
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "130px" }}
                   />
                   <SortableHeader
                     label="Termín dodání"
@@ -153,6 +297,15 @@ export function OrdersView({
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "130px" }}
+                  />
+                  <SortableHeader
+                    label="Celková hodnota"
+                    columnKey="totalAmount"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    style={{ width: "140px", textAlign: "right" }}
                   />
                   <SortableHeader
                     label="Stav"
@@ -160,82 +313,76 @@ export function OrdersView({
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    style={{ width: "120px", textAlign: "center" }}
                   />
-                  <SortableHeader
-                    label="Částka"
-                    columnKey="totalAmount"
-                    currentSortKey={sortKey}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                  />
+                  <th style={{ width: "90px", textAlign: "center" }}>Detail</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem", color: "var(--text-dim)" }}>
-                      Načítám objednávky ze systému Helios...
+                    <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b" }}>
+                      Načítám objednávky z Helios Nephrite...
                     </td>
                   </tr>
-                ) : sorted.length === 0 ? (
+                ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem", color: "var(--text-dim)" }}>
-                      Žádné objednávky neodpovídají hledání.
+                    <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b" }}>
+                      Nebyly nalezeny žádné objednávky.
                     </td>
                   </tr>
                 ) : (
-                  paginatedOrders.map((order) => {
-                    const client = safeString(order.customer?.name || order.customerName, "Běžný zákazník");
-                    const orderNo = safeString(order.orderNumber || order.number, `#${order.id}`);
+                  paginatedOrders.map((ord) => {
+                    const isSelected = selectedRowId === ord.id;
+                    const docNum = safeString(ord.orderNumber || ord.number, `#${ord.id}`);
+                    const partner = safeString(ord.customer?.name || ord.customerName, "Nezadáno");
+                    const total = safeNumber(ord.totalAmount, 0);
 
                     return (
-                      <tr key={order.id}>
-                        {/* Detail and Edit in 1st column */}
-                        <td style={{ textAlign: "center" }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}>
-                            <button
-                              onClick={() => setSelectedOrder(order)}
-                              className="btn btn-secondary"
-                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
-                              title="Zobrazit detail objednávky"
-                            >
-                              <Eye size={13} />
-                              <span>Detail</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingOrder(order);
-                                setIsFormOpen(true);
-                              }}
-                              className="btn btn-secondary"
-                              style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem", gap: "0.25rem" }}
-                              title="Upravit objednávku"
-                            >
-                              <Edit3 size={13} />
-                              <span>Upravit</span>
-                            </button>
-                          </div>
-                        </td>
-                        <td style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                          {orderNo}
-                        </td>
-                        <td style={{ fontWeight: 600 }}>
-                          {client}
-                        </td>
-                        <td style={{ color: "var(--text-muted)" }}>
-                          {safeDate(order.orderDate)}
-                        </td>
-                        <td style={{ color: "var(--text-muted)" }}>
-                          {safeDate(order.deliveryDate)}
+                      <tr 
+                        key={ord.id}
+                        className={isSelected ? "row-selected" : ""}
+                        onClick={() => setSelectedRowId(ord.id)}
+                        onDoubleClick={() => {
+                          setEditingOrder(ord);
+                          setIsFormOpen(true);
+                        }}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <td style={{ fontWeight: 600, fontFamily: "var(--font-mono)" }}>
+                          {docNum}
                         </td>
                         <td>
+                          <div style={{ fontWeight: 600 }}>{partner}</div>
+                        </td>
+                        <td>{safeDate(ord.orderDate)}</td>
+                        <td>{safeDate(ord.deliveryDate)}</td>
+                        <td style={{ textAlign: "right", fontWeight: 700 }}>
+                          {safeCurrency(total)}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
                           <span className="badge badge-info">
-                            <Clock size={12} />
-                            <span>{safeString(order.status, "V řešení")}</span>
+                            {safeString(ord.status, "V řešení")}
                           </span>
                         </td>
-                        <td style={{ fontWeight: 700 }}>
-                          {order.totalAmount != null ? safeCurrency(order.totalAmount) : "—"}
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrder(ord);
+                            }}
+                            className="asol-btn"
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              fontSize: "0.75rem",
+                              background: isSelected ? "rgba(255,255,255,0.2)" : "#ffffff",
+                              borderColor: isSelected ? "rgba(255,255,255,0.5)" : "#cbd5e1",
+                              color: isSelected ? "#ffffff" : "#0284c7",
+                            }}
+                            title="Zobrazit detail"
+                          >
+                            <Eye size={13} />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -245,19 +392,36 @@ export function OrdersView({
             </table>
           </div>
 
-          <Pagination
-            currentPage={currentPage}
-            totalItems={sorted.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setCurrentPage(1);
-            }}
-          />
+          {/* Footer Bar */}
+          <div style={{
+            padding: "0.85rem 1.25rem",
+            borderTop: "1px solid #e2e8f0",
+            background: "#f8fafc",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "1rem",
+            fontSize: "0.825rem",
+          }}>
+            <div>
+              <span style={{ color: "#64748b" }}>Zobrazeno záznamů: </span>
+              <strong style={{ color: "#1e293b" }}>{filtered.length}</strong>
+            </div>
+
+            {filtered.length > pageSize && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filtered.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Robust Order Detail Modal */}
+        {/* View Detail Modal */}
         {selectedOrder && (
           <div 
             className="modal-backdrop" 
@@ -265,130 +429,96 @@ export function OrdersView({
               if (e.target === e.currentTarget) setSelectedOrder(null);
             }}
           >
-            <div className="modal-dialog animate-fade-in" style={{ maxWidth: "560px", padding: "2rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                  <div style={{
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(16, 185, 129, 0.25))",
-                    border: "1px solid rgba(59, 130, 246, 0.4)",
+            <div 
+              className="modal-dialog animate-fade-in" 
+              style={{ maxWidth: "700px", padding: "1.75rem" }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                <div>
+                  <div className="asol-breadcrumb" style={{ margin: 0, padding: 0, background: "transparent", border: "none" }}>
+                    <span>Objednávky</span>
+                    <span className="separator">/</span>
+                    <span className="current">{selectedOrder.orderNumber || selectedOrder.id}</span>
+                  </div>
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#1e293b", marginTop: "0.25rem" }}>
+                    Objednávka {selectedOrder.orderNumber || selectedOrder.id}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  style={{
+                    width: "30px",
+                    height: "30px",
+                    borderRadius: "6px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: "var(--accent-blue)",
-                  }}>
-                    <ShoppingCart size={22} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--accent-cyan)", fontWeight: 700 }}>
-                      {subType === "received" ? "Přijatá objednávka" : "Vydaná objednávka"}
-                    </div>
-                    <h2 style={{ fontSize: "1.35rem", fontWeight: 800 }}>
-                      {safeString(selectedOrder.orderNumber || selectedOrder.number, `#${selectedOrder.id}`)}
-                    </h2>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <button
-                    onClick={() => {
-                      const ord = selectedOrder;
-                      setSelectedOrder(null);
-                      setEditingOrder(ord);
-                      setIsFormOpen(true);
-                    }}
-                    className="btn btn-secondary"
-                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", gap: "0.35rem" }}
-                  >
-                    <Edit3 size={14} />
-                    <span>Upravit objednávku</span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedOrder(null)}
-                    style={{
-                      width: "34px",
-                      height: "34px",
-                      borderRadius: "8px",
-                      background: "rgba(255,255,255,0.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--text-muted)",
-                    }}
-                    title="Zavřít"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+                    color: "#64748b",
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    cursor: "pointer",
+                  }}
+                >
+                  <X size={15} />
+                </button>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div style={{ padding: "1rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: "0.725rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>
+                    Partner
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginTop: "0.2rem" }}>
+                    {safeString(selectedOrder.customer?.name || selectedOrder.customerName, "Nezadáno")}
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.825rem" }}>
+                  <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontSize: "0.725rem" }}>Datum objednání</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b", marginTop: "0.2rem" }}>{safeDate(selectedOrder.orderDate)}</div>
+                  </div>
+                  <div style={{ padding: "0.75rem", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontSize: "0.725rem" }}>Termín dodání</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b", marginTop: "0.2rem" }}>{safeDate(selectedOrder.deliveryDate)}</div>
+                  </div>
+                </div>
+
                 <div style={{
-                  background: "rgba(10, 15, 25, 0.6)",
-                  padding: "1.25rem",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border-subtle)",
+                  padding: "1rem 1.25rem",
+                  borderRadius: "6px",
+                  background: "#f0f9ff",
+                  border: "1px solid #bae6fd",
                   display: "flex",
-                  flexDirection: "column",
-                  gap: "0.85rem",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}>
                   <div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Partner / Odběratel:</div>
-                    <div style={{ fontWeight: 600, fontSize: "0.95rem", marginTop: "0.2rem" }}>
-                      {safeString(selectedOrder.customer?.name || selectedOrder.customerName, "Běžný zákazník")}
-                    </div>
+                    <span className="badge badge-info">{safeString(selectedOrder.status, "V řešení")}</span>
                   </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                    <div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Datum vystavení:</div>
-                      <div style={{ fontWeight: 500, marginTop: "0.2rem" }}>
-                        {safeDate(selectedOrder.orderDate)}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Termín dodání:</div>
-                      <div style={{ fontWeight: 500, marginTop: "0.2rem" }}>
-                        {safeDate(selectedOrder.deliveryDate)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                    <div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Stav zpracování:</div>
-                      <div style={{ marginTop: "0.2rem" }}>
-                        <span className="badge badge-info">
-                          {safeString(selectedOrder.status, "V evidenci")}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Celková částka:</div>
-                      <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "var(--brand-primary)", marginTop: "0.2rem" }}>
-                        {selectedOrder.totalAmount != null ? safeCurrency(selectedOrder.totalAmount) : "—"}
-                      </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Celková hodnota:</div>
+                    <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#0284c7" }}>
+                      {safeCurrency(selectedOrder.totalAmount)}
                     </div>
                   </div>
                 </div>
 
-                {selectedOrder.note && typeof selectedOrder.note === "string" && selectedOrder.note.trim() && (
-                  <div style={{
-                    padding: "0.85rem",
-                    background: "rgba(255,255,255,0.02)",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "0.85rem",
-                    color: "var(--text-muted)",
-                  }}>
-                    Poznámka: {selectedOrder.note}
-                  </div>
-                )}
-
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
+                  <button
+                    onClick={() => {
+                      setEditingOrder(selectedOrder);
+                      setSelectedOrder(null);
+                      setIsFormOpen(true);
+                    }}
+                    className="asol-btn"
+                  >
+                    <Edit3 size={14} />
+                    <span>Upravit</span>
+                  </button>
                   <button
                     onClick={() => setSelectedOrder(null)}
-                    className="btn btn-secondary"
+                    className="asol-btn"
                   >
                     Zavřít
                   </button>

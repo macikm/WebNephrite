@@ -135,23 +135,32 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
 
   return (
     <ErrorBoundary fallbackTitle="Chyba při zobrazení dokumentů">
-      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-        <div className="glass-panel" style={{ padding: "1.25rem 1.5rem" }}>
+      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {/* ASOL Breadcrumbs */}
+        <div className="asol-breadcrumb">
+          <span className="link">Dashboard</span>
+          <span className="separator">/</span>
+          <span className="link">Správa</span>
+          <span className="separator">/</span>
+          <span className="current">Správa dokumentů DMS</span>
+        </div>
+
+        <div className="glass-panel" style={{ padding: "0.85rem 1.25rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
             <div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Správa dokumentů DMS</h3>
-              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>
+              <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#1e293b" }}>Správa dokumentů DMS</h3>
+              <p style={{ fontSize: "0.775rem", color: "#64748b", marginTop: "0.15rem" }}>
                 Elektronický archiv smluv, příloh a externích dokumentů s integrovaným prohlížečem
               </p>
             </div>
 
             <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flex: "1 1 400px", justifyContent: "flex-end" }}>
               <div style={{ position: "relative", flex: "1 1 260px", maxWidth: "400px" }}>
-                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+                <Search size={15} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
                 <input
                   type="text"
                   className="input-control"
-                  style={{ paddingLeft: "2.2rem", fontSize: "0.85rem" }}
+                  style={{ paddingLeft: "2rem", paddingRight: "1.75rem", fontSize: "0.825rem", height: "34px" }}
                   placeholder="Hledat dokument podle názvu nebo souboru..."
                   value={search}
                   onChange={(e) => {
@@ -380,18 +389,20 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
                   <button
                     onClick={() => setSelectedDoc(null)}
                     style={{
-                      width: "34px",
-                      height: "34px",
-                      borderRadius: "8px",
-                      background: "rgba(255,255,255,0.08)",
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "6px",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: "var(--text-muted)",
+                      color: "#64748b",
+                      cursor: "pointer",
                     }}
                     title="Zavřít prohlížeč"
                   >
-                    <X size={18} />
+                    <X size={15} />
                   </button>
                 </div>
               </div>
@@ -402,9 +413,9 @@ export function DocumentsView({ documents, isLoading, onSaveDocument }: Document
                   <div style={{
                     padding: "4rem 1.5rem",
                     textAlign: "center",
-                    background: "rgba(10, 15, 25, 0.6)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--border-subtle)",
+                    background: "#f8fafc",
+                    borderRadius: "6px",
+                    border: "1px solid #e2e8f0",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",

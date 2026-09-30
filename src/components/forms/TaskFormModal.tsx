@@ -126,17 +126,19 @@ export function TaskFormModal({
           <button
             onClick={onClose}
             style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "8px",
-              background: "rgba(255,255,255,0.08)",
+              width: "30px",
+              height: "30px",
+              borderRadius: "6px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "var(--text-muted)",
+              color: "#64748b",
+              cursor: "pointer",
             }}
           >
-            <X size={18} />
+            <X size={15} />
           </button>
         </div>
 

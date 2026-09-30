@@ -4,51 +4,60 @@
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Theme colors - Deep Slate & Emerald Jade */
-  --bg-primary: #0b0f19;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1a2234;
-  --bg-card: rgba(22, 30, 46, 0.75);
-  --bg-card-hover: rgba(30, 41, 59, 0.85);
-  --bg-input: #0e1626;
+  /* ASOL Portál / Helios Light Theme colors */
+  --bg-primary: #f4f6f9;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-input: #f8fafc;
+  --bg-input-focus: #ffffff;
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-focus: #10b981;
-  --border-card: rgba(255, 255, 255, 0.06);
+  --border-subtle: #e2e8f0;
+  --border-card: #cbd5e1;
+  --border-focus: #0284c7;
 
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
 
-  --brand-primary: #10b981;
-  --brand-primary-hover: #059669;
-  --brand-glow: rgba(16, 185, 129, 0.25);
+  /* Asseco Corporate Blue Brand */
+  --brand-primary: #0284c7;
+  --brand-primary-hover: #0369a1;
+  --brand-glow: rgba(2, 132, 199, 0.18);
 
-  --accent-cyan: #06b6d4;
-  --accent-purple: #8b5cf6;
-  --accent-amber: #f59e0b;
-  --accent-rose: #f43f5e;
-  --accent-blue: #3b82f6;
+  --asol-blue: #0284c7;
+  --asol-sky: #38bdf8;
+  --asol-light-blue: #e0f2fe;
+  --asol-row-selected: #38bdf8;
+  --asol-row-hover: #f0f9ff;
+  --asol-border: #cbd5e1;
 
-  --status-paid: #10b981;
-  --status-paid-bg: rgba(16, 185, 129, 0.15);
-  --status-unpaid: #f43f5e;
-  --status-unpaid-bg: rgba(244, 63, 94, 0.15);
-  --status-warning: #f59e0b;
-  --status-warning-bg: rgba(245, 158, 11, 0.15);
-  --status-info: #3b82f6;
-  --status-info-bg: rgba(59, 130, 246, 0.15);
+  --accent-cyan: #0284c7;
+  --accent-purple: #7c3aed;
+  --accent-amber: #d97706;
+  --accent-rose: #e11d48;
+  --accent-blue: #2563eb;
 
-  --glass-blur: blur(14px);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
-  --shadow-glow: 0 0 25px var(--brand-glow);
+  --status-paid: #16a34a;
+  --status-paid-bg: #dcfce7;
+  --status-unpaid: #dc2626;
+  --status-unpaid-bg: #fee2e2;
+  --status-warning: #d97706;
+  --status-warning-bg: #fef3c7;
+  --status-info: #0284c7;
+  --status-info-bg: #e0f2fe;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --glass-blur: blur(8px);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 15px var(--brand-glow);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 }
 
 * {
@@ -63,10 +72,6 @@ html, body {
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-main);
-  background-image: 
-    radial-gradient(at 10% 10%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
-    radial-gradient(at 90% 80%, rgba(59, 130, 246, 0.06) 0px, transparent 50%);
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -84,106 +89,297 @@ button {
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #25334a;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #374763;
+  background: #94a3b8;
 }
 
 /* Base Utility Classes */
 .glass-panel {
-  background: var(--bg-card);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background: #ffffff;
   border: 1px solid var(--border-card);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .glow-effect {
-  box-shadow: var(--shadow-glow);
+  box-shadow: var(--shadow-sm);
 }
 
-/* Buttons */
+/* ASOL Breadcrumbs */
+.asol-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  background: #ffffff;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 1rem;
+}
+
+.asol-breadcrumb a, .asol-breadcrumb span.link {
+  color: var(--asol-blue);
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.asol-breadcrumb a:hover, .asol-breadcrumb span.link:hover {
+  text-decoration: underline;
+}
+
+.asol-breadcrumb span.separator {
+  color: var(--text-dim);
+}
+
+.asol-breadcrumb span.current {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ASOL Action Toolbar */
+.asol-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.asol-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ASOL Standard Buttons */
+.asol-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-card);
+  background: #ffffff;
+  color: #334155;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.asol-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.asol-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.asol-btn-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+/* ASOL Green Save Button */
+.asol-btn-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  border: 1px solid #16a34a;
+  color: #16a34a;
+  transition: all 0.15s ease;
+}
+
+.asol-btn-save:hover:not(:disabled) {
+  background: #f0fdf4;
+  border-color: #15803d;
+  color: #15803d;
+}
+
+/* ASOL Red Back / Cancel Button */
+.asol-btn-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  transition: all 0.15s ease;
+}
+
+.asol-btn-back:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #b91c1c;
+  color: #b91c1c;
+}
+
+/* ASOL Blue Action Button */
+.asol-btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  border: 1px solid var(--asol-blue);
+  color: var(--asol-blue);
+  transition: all 0.15s ease;
+}
+
+.asol-btn-action:hover:not(:disabled) {
+  background: #f0f9ff;
+  border-color: #0369a1;
+  color: #0369a1;
+}
+
+/* ASOL Tabs Navigation */
+.asol-tabs {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 2px solid var(--border-subtle);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.asol-tab {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.5rem 0.25rem;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.asol-tab:hover {
+  color: var(--text-main);
+}
+
+.asol-tab.active {
+  color: var(--asol-blue);
+}
+
+.asol-tab.active::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--asol-blue);
+  border-radius: 2px;
+}
+
+/* Standard Buttons compatibility */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.125rem;
+  padding: 0.55rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
   border-radius: var(--radius-md);
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--brand-primary), #059669);
+  background: var(--asol-blue);
   color: #ffffff;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+  border: 1px solid var(--asol-blue);
 }
 
 .btn-primary:hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45);
+  background: #0369a1;
+  border-color: #0369a1;
 }
 
 .btn-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-main);
-  border: 1px solid var(--border-subtle);
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid var(--border-card);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: #f8fafc;
+  border-color: #94a3b8;
 }
 
 .btn-danger {
-  background: rgba(244, 63, 94, 0.15);
-  color: #fda4af;
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
 }
 
 .btn-danger:hover {
-  background: rgba(244, 63, 94, 0.25);
+  background: #fecaca;
 }
 
 /* Forms */
 .input-control {
   width: 100%;
-  padding: 0.65rem 0.9rem;
+  padding: 0.55rem 0.8rem;
   background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-card);
   border-radius: var(--radius-md);
   color: var(--text-main);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-family: inherit;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   outline: none;
 }
 
 .input-control:focus {
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  background: #ffffff;
+  border-color: var(--asol-blue);
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+.input-control:disabled, .input-control:read-only {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: default;
 }
 
 .label-control {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.775rem;
   font-weight: 600;
   color: var(--text-muted);
-  margin-bottom: 0.4rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  margin-bottom: 0.35rem;
 }
 
 /* Badges */
@@ -191,7 +387,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.25rem 0.65rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -200,49 +396,49 @@ button {
 .badge-paid {
   background: var(--status-paid-bg);
   color: var(--status-paid);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid #86efac;
 }
 
 .badge-unpaid {
   background: var(--status-unpaid-bg);
   color: var(--status-unpaid);
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  border: 1px solid #fca5a5;
 }
 
 .badge-warning {
   background: var(--status-warning-bg);
   color: var(--status-warning);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  border: 1px solid #fde68a;
 }
 
 .badge-info {
   background: var(--status-info-bg);
   color: var(--status-info);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid #bae6fd;
 }
 
-/* Tables */
+/* ASOL Data Grid / Table */
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-card);
+  background: #ffffff;
   scrollbar-gutter: stable;
 }
 
 .table-wrapper::-webkit-scrollbar {
-  height: 10px;
+  height: 8px;
 }
 .table-wrapper::-webkit-scrollbar-track {
-  background: rgba(10, 15, 25, 0.9);
-  border-radius: 4px;
+  background: #f8fafc;
 }
 .table-wrapper::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 5px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 .table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--brand-primary);
+  background: var(--asol-blue);
 }
 
 .erp-table {
@@ -250,31 +446,70 @@ button {
   min-width: 1080px;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
+  background: #ffffff;
 }
 
 .erp-table th {
-  background: rgba(15, 23, 42, 0.95);
-  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  padding: 0.65rem 0.85rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: #334155;
   border-bottom: 1px solid var(--border-card);
+  border-right: 1px solid #e2e8f0;
   white-space: nowrap;
+  user-select: none;
+}
+
+.erp-table th:last-child {
+  border-right: none;
 }
 
 .erp-table td {
-  padding: 0.95rem 1rem;
-  border-bottom: 1px solid var(--border-card);
-  color: var(--text-main);
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f8fafc;
+  color: #1e293b;
   vertical-align: middle;
+  font-size: 0.85rem;
+}
+
+.erp-table td:last-child {
+  border-right: none;
 }
 
 .erp-table tbody tr {
-  transition: background 0.15s ease;
+  transition: background 0.12s ease;
+  cursor: pointer;
 }
 
-.erp-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.04);
+.erp-table tbody tr:hover:not(.row-selected) {
+  background: var(--asol-row-hover);
+}
+
+/* ASOL Row Selection: Sky Blue #38bdf8 with crisp white text */
+.erp-table tbody tr.row-selected,
+.row-selected {
+  background-color: var(--asol-row-selected) !important;
+  color: #ffffff !important;
+}
+
+.erp-table tbody tr.row-selected td,
+.row-selected td {
+  color: #ffffff !important;
+  background-color: var(--asol-row-selected) !important;
+}
+
+.erp-table tbody tr.row-selected a,
+.erp-table tbody tr.row-selected span,
+.erp-table tbody tr.row-selected strong {
+  color: #ffffff !important;
+}
+
+.erp-table tbody tr.row-selected .badge {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
 }
 
 /* Modal styling */
@@ -286,9 +521,9 @@ button {
   bottom: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -298,13 +533,14 @@ button {
 
 .modal-dialog {
   width: 100%;
-  max-height: 88vh;
+  max-height: 90vh;
   overflow-y: auto;
   position: relative;
-  border-radius: var(--radius-lg);
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 1px rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: var(--text-main);
+  border: 1px solid var(--border-card);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 /* KPI Cards */
@@ -313,37 +549,76 @@ button {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  background: #ffffff;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .kpi-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: #94a3b8;
+  box-shadow: var(--shadow-md);
 }
 
 .kpi-val {
-  font-size: 1.85rem;
+  font-size: 1.75rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+/* ASOL Dashboard Quick Tiles */
+.asol-tile {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  height: 90px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: flex-end;
+  padding: 1rem;
+  color: #ffffff;
+}
+
+.asol-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.asol-tile-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.75) 100%);
+  z-index: 1;
+}
+
+.asol-tile-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.asol-tile-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-
-.animate-pulse-glow {
-  animation: pulseGlow 2.5s infinite ease-in-out;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Toast Notifications */
@@ -361,12 +636,11 @@ button {
 
 .toast {
   pointer-events: auto;
-  padding: 0.9rem 1.2rem;
+  padding: 0.85rem 1.1rem;
   border-radius: var(--radius-md);
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  background: #ffffff;
+  border: 1px solid var(--border-card);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -376,16 +650,16 @@ button {
 }
 
 .toast-success {
-  border-color: rgba(16, 185, 129, 0.4);
+  border-left: 4px solid #16a34a;
 }
 
 .toast-error {
-  border-color: rgba(244, 63, 94, 0.4);
+  border-left: 4px solid #dc2626;
 }
 
 /* Form Helper Classes */
 .form-section {
-  background: rgba(10, 16, 28, 0.6);
+  background: #f8fafc;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 1.25rem;
@@ -393,11 +667,11 @@ button {
 }
 
 .form-section-title {
-  font-size: 0.85rem;
+  font-size: 0.825rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--brand-primary);
+  color: var(--asol-blue);
   margin-bottom: 1rem;
   display: flex;
   align-items: center;

@@ -31,41 +31,50 @@ export function SettingsView({ userInfo }: SettingsViewProps) {
   };
 
   return (
-    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {/* ASOL Breadcrumbs */}
+      <div className="asol-breadcrumb">
+        <span className="link">Dashboard</span>
+        <span className="separator">/</span>
+        <span className="link">Správa</span>
+        <span className="separator">/</span>
+        <span className="current">Systém a Helios API</span>
+      </div>
+
       {/* System Status Banner */}
-      <div className="glass-panel" style={{ padding: "1.5rem" }}>
-        <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <Server size={18} style={{ color: "var(--brand-primary)" }} />
+      <div className="glass-panel" style={{ padding: "1.25rem 1.5rem" }}>
+        <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#1e293b", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <Server size={18} style={{ color: "#0284c7" }} />
           <span>Konfigurace a stav propojení s Helios Nephrite</span>
         </h3>
 
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "1.25rem",
+          gap: "1rem",
         }}>
-          <div style={{ background: "rgba(10, 15, 25, 0.6)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Helios API Server</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.95rem", fontWeight: 600, marginTop: "0.3rem" }}>
+          <div style={{ background: "#f8fafc", padding: "1rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}>
+            <div style={{ fontSize: "0.725rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Helios API Server</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.95rem", fontWeight: 600, color: "#1e293b", marginTop: "0.3rem" }}>
               https://demo-api.helios.eu
             </div>
-            <div style={{ fontSize: "0.8rem", color: "var(--status-paid)", marginTop: "0.25rem" }}>● Provozuschopné (HTTP 200)</div>
+            <div style={{ fontSize: "0.8rem", color: "#16a34a", marginTop: "0.25rem", fontWeight: 600 }}>● Provozuschopné (HTTP 200)</div>
           </div>
 
-          <div style={{ background: "rgba(10, 15, 25, 0.6)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Aplikační server (HeG Noris)</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.95rem", fontWeight: 600, marginTop: "0.3rem" }}>
+          <div style={{ background: "#f8fafc", padding: "1rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}>
+            <div style={{ fontSize: "0.725rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Aplikační server (HeG Noris)</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.95rem", fontWeight: 600, color: "#1e293b", marginTop: "0.3rem" }}>
               {userInfo?.serverUrl || "https://open.helios.eu/DemoNephrite"}
             </div>
-            <div style={{ fontSize: "0.8rem", color: "var(--accent-cyan)", marginTop: "0.25rem" }}>Profil: {userInfo?.dbprofile || "Demo"}</div>
+            <div style={{ fontSize: "0.8rem", color: "#0284c7", marginTop: "0.25rem", fontWeight: 600 }}>Profil: {userInfo?.dbprofile || "Demo"}</div>
           </div>
 
-          <div style={{ background: "rgba(10, 15, 25, 0.6)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Přihlášený uživatel</div>
-            <div style={{ fontSize: "0.95rem", fontWeight: 600, marginTop: "0.3rem" }}>
+          <div style={{ background: "#f8fafc", padding: "1rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}>
+            <div style={{ fontSize: "0.725rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Přihlášený uživatel</div>
+            <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1e293b", marginTop: "0.3rem" }}>
               {userInfo?.userName || "tester"}
             </div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "0.25rem" }}>
               Role: {userInfo?.systemRole || "user"} • Jazyk: {userInfo?.languageId || "CZ"}
             </div>
           </div>
