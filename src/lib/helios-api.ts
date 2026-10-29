@@ -18,14 +18,19 @@ async function loginToHelios(
     dbProfile?: string;
     serverURL?: string;
     languageId?: string;
+    forceRefresh?: boolean;
   } = {}
 ): Promise<string> {
   const cacheKey = `${apiUrl}::${userName}::${password}`;
-  const cached = loginSessionCache.get(cacheKey);
   const now = Date.now();
 
-  if (cached && cached.expiresAt > now) {
-    return cached.userId;
+  if (!options.forceRefresh) {
+    const cached = loginSessionCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return cached.userId;
+    }
+  } else {
+    loginSessionCache.delete(cacheKey);
   }
 
   const payload = {
@@ -52,10 +57,10 @@ async function loginToHelios(
     throw new Error(`Helios Login selhal: ${msg}`);
   }
 
-  // Cache token for 30 minutes
+  // Cache token for 20 minutes
   loginSessionCache.set(cacheKey, {
     userId: data.userId,
-    expiresAt: now + 30 * 60 * 1000,
+    expiresAt: now + 20 * 60 * 1000,
   });
 
   return data.userId;
@@ -66,7 +71,8 @@ async function loginToHelios(
  * Automatically exchanges (userName + password) for a Helios session UserId token via /api/connect/login.
  */
 export async function resolveHeliosCredentials(
-  headers?: Record<string, string | undefined>
+  headers?: Record<string, string | undefined>,
+  forceRefresh = false
 ): Promise<{ authHeader: string; apiUrl: string }> {
   const normHeaders: Record<string, string> = {};
   if (headers) {
@@ -100,6 +106,7 @@ export async function resolveHeliosCredentials(
       dbProfile: normHeaders["x-helios-dbprofile"],
       serverURL: normHeaders["x-helios-serverurl"],
       languageId: normHeaders["x-helios-language"],
+      forceRefresh,
     });
 
     return {
@@ -127,7 +134,7 @@ export async function resolveHeliosCredentials(
         apiUrl: apiUrl.replace(/\/+$/, ""),
       };
     }
-    const userId = await loginToHelios(apiUrl, envUser, envPass);
+    const userId = await loginToHelios(apiUrl, envUser, envPass, { forceRefresh });
     return {
       authHeader: createBasicAuthHeader(envUser, userId),
       apiUrl: apiUrl.replace(/\/+$/, ""),
@@ -153,7 +160,7 @@ export async function resolveHeliosCredentials(
 }
 
 /**
- * Universal caller to Helios REST API.
+ * Universal caller to Helios REST API with automatic 401 re-login retry.
  */
 export async function callHeliosApi<T = unknown>(
   path: string,
@@ -164,7 +171,7 @@ export async function callHeliosApi<T = unknown>(
     headers?: Record<string, string | undefined>;
   } = {}
 ): Promise<{ status: number; ok: boolean; data: T }> {
-  const { authHeader, apiUrl } = await resolveHeliosCredentials(options.headers);
+  let { authHeader, apiUrl } = await resolveHeliosCredentials(options.headers);
 
   const cleanPath = path.replace(/^\/+/, "");
   const targetUrl = new URL(`${apiUrl}/api/${cleanPath}`);
@@ -188,12 +195,28 @@ export async function callHeliosApi<T = unknown>(
     bodyStr = typeof options.body === "string" ? options.body : JSON.stringify(options.body);
   }
 
-  const res = await fetch(targetUrl.toString(), {
+  let res = await fetch(targetUrl.toString(), {
     method: options.method || "GET",
     headers: reqHeaders,
     body: bodyStr,
     cache: "no-store",
   });
+
+  // If 401 Unauthorized, automatically invalidate cached token and retry once with a fresh login!
+  if (res.status === 401) {
+    try {
+      const fresh = await resolveHeliosCredentials(options.headers, true);
+      reqHeaders.Authorization = fresh.authHeader;
+      res = await fetch(targetUrl.toString(), {
+        method: options.method || "GET",
+        headers: reqHeaders,
+        body: bodyStr,
+        cache: "no-store",
+      });
+    } catch {
+      // ignore retry failure and let standard error reporting handle it
+    }
+  }
 
   const contentType = res.headers.get("content-type") || "";
   let responseData: any = null;

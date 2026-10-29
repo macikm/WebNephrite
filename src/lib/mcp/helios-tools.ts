@@ -462,12 +462,15 @@ export function registerHeliosTools(server: McpServer) {
             country: o.zeme_iso_kod_zeme ? String(o.zeme_iso_kod_zeme) : "CZ",
           }));
         } catch {
-          // Fallback to eshop customers
-          const res = await callHeliosApi<any>("v1/eshop/customers", {
-            query: { Top: top || 100 },
-            headers: extractHeaders(extra),
-          });
-          list = res.data?.customers || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+          try {
+            const res = await callHeliosApi<any>("v1/general/companies", {
+              query: { Top: top || 100 },
+              headers: extractHeaders(extra),
+            });
+            list = res.data?.companies || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+          } catch {
+            list = [];
+          }
         }
 
         if (query) {
