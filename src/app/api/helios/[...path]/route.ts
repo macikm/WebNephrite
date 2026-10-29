@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, createBasicAuthHeader } from "@/lib/auth";
+import { resolveHeliosCredentials } from "@/lib/helios-api";
 
 async function proxyRequest(request: NextRequest, params: { path: string[] }) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Neautorizovaný přístup. Přihlaste se prosím." }, { status: 401 });
+  let authHeader: string;
+  let apiUrl: string;
+
+  try {
+    const creds = await resolveHeliosCredentials(Object.fromEntries(request.headers.entries()));
+    authHeader = creds.authHeader;
+    apiUrl = creds.apiUrl;
+  } catch {
+    return NextResponse.json(
+      { error: "Neautorizovaný přístup. Přihlaste se prosím nebo zadejte platné přihlašovací hlavičky." },
+      { status: 401 }
+    );
   }
 
   const path = params.path.join("/");
-  const apiUrl = process.env.HELIOS_API_URL || "https://demo-api.helios.eu";
   const url = new URL(`${apiUrl}/api/${path}`);
 
   // Forward query parameters
@@ -16,7 +24,6 @@ async function proxyRequest(request: NextRequest, params: { path: string[] }) {
     url.searchParams.set(key, val);
   });
 
-  const authHeader = createBasicAuthHeader(session.userName, session.userId);
   const headers: Record<string, string> = {
     Authorization: authHeader,
     Accept: "application/json",
