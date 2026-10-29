@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  serverExternalPackages: ["@modelcontextprotocol/sdk"],
   async rewrites() {
     return [
       {
