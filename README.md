@@ -125,16 +125,16 @@ Aplikace využívá bezpečný **BFF (Backend-For-Frontend)** vzor:
 
 ---
 
-## 🐳 Nasazení na server (Proxmox / Docker / CI-CD)
+## 🐳 Nasazení na server (Docker & CI/CD)
 
-Projekt je plně automatizován pomocí **GitHub Actions** a registru **GitHub Packages (GHCR)**.
+Projekt využívá automatické sestavování obrazů přes **GitHub Actions** a registr **GitHub Packages (GHCR)**.
 
 ### Automatický build v cloudu (CI/CD)
-Při každém nahrání kódu (`git push`) do větve `main` GitHub na svých serverech automaticky sestaví optimalizovaný Docker image a publikuje jej do:
+Při každém nahrání kódu (`git push`) do větve `main` GitHub automaticky sestaví produkční Docker image a publikuje jej do:
 👉 `ghcr.io/macikm/webnephrite:latest`
 
-### Blesková aktualizace na serveru (`update.sh`)
-Na vašem serveru v `/opt/WebNephrite` již **neprobíhá žádná náročná kompilace**, která by vytěžovala procesor nebo paměť:
+### Aktualizace na serveru (`update.sh`)
+Pro aktualizaci aplikace na serveru (v `/opt/WebNephrite`) stačí spustit:
 
 ```bash
 ./update.sh
@@ -142,11 +142,9 @@ Na vašem serveru v `/opt/WebNephrite` již **neprobíhá žádná náročná ko
 
 Skript provede:
 1. `git pull origin main`
-2. `docker compose pull` (stáhne hotový zkomprimovaný image z GitHubu)
-3. `docker compose up -d` (okamžitě restartuje kontejner)
-4. `docker image prune -f`
-
-Celá aktualizace trvá **cca 3 až 5 vteřin**, nezpůsobuje zátěž CPU na Proxmoxu a **neshodí Cloudflare tunel**.
+2. `docker compose pull` (stáhne připravený Docker image z GitHub Packages)
+3. `docker compose up -d` (nastartuje kontejner s novou verzí)
+4. `docker image prune -f` (uklidí staré nepoužívané vrstvy)
 
 ---
 

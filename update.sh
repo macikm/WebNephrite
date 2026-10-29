@@ -21,4 +21,4 @@ fi
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🧹 Promazávám staré nepoužívané image..."
 docker image prune -f
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🎉 Blesková aktualizace dokončena za pár vteřin bez zátěže procesoru!"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🎉 Aktualizace úspěšně dokončena!"
