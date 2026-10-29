@@ -7,8 +7,63 @@ export interface HeliosAuthCredentials {
   authorization?: string;
 }
 
+// In-memory session key cache to avoid re-logging in on every single API request
+const loginSessionCache = new Map<string, { userId: string; expiresAt: number }>();
+
+async function loginToHelios(
+  apiUrl: string,
+  userName: string,
+  password: string,
+  options: {
+    dbProfile?: string;
+    serverURL?: string;
+    languageId?: string;
+  } = {}
+): Promise<string> {
+  const cacheKey = `${apiUrl}::${userName}::${password}`;
+  const cached = loginSessionCache.get(cacheKey);
+  const now = Date.now();
+
+  if (cached && cached.expiresAt > now) {
+    return cached.userId;
+  }
+
+  const payload = {
+    userName,
+    password,
+    useWindowsAuthentication: false,
+    useCurrentUserCredentials: false,
+    languageId: options.languageId || process.env.HELIOS_LANGUAGE_ID || "CZ",
+    dbProfile: options.dbProfile || process.env.HELIOS_DB_PROFILE || "Demo",
+    serverURL: options.serverURL || process.env.HELIOS_SERVER_URL || "https://open.helios.eu/DemoNephrite",
+  };
+
+  const cleanApiUrl = apiUrl.replace(/\/+$/, "");
+  const loginRes = await fetch(`${cleanApiUrl}/api/connect/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await loginRes.json().catch(() => null);
+
+  if (!loginRes.ok || !data?.success || !data?.userId) {
+    const msg = data?.errorMessage || `Přihlášení k Helios Nephrite se nezdařilo (HTTP ${loginRes.status}).`;
+    throw new Error(`Helios Login selhal: ${msg}`);
+  }
+
+  // Cache token for 30 minutes
+  loginSessionCache.set(cacheKey, {
+    userId: data.userId,
+    expiresAt: now + 30 * 60 * 1000,
+  });
+
+  return data.userId;
+}
+
 /**
  * Resolves credentials from request headers, session cookie, or environment variables.
+ * Automatically exchanges (userName + password) for a Helios session UserId token via /api/connect/login.
  */
 export async function resolveHeliosCredentials(
   headers?: Record<string, string | undefined>
@@ -27,12 +82,28 @@ export async function resolveHeliosCredentials(
     process.env.HELIOS_API_URL ||
     "https://demo-api.helios.eu";
 
-  // 1. Direct custom headers: X-Helios-User & X-Helios-Password
+  // 1. Direct custom headers: X-Helios-User & X-Helios-Password (or Key)
   const headerUser = normHeaders["x-helios-user"] || normHeaders["x-helios-username"];
   const headerPass = normHeaders["x-helios-password"] || normHeaders["x-helios-key"] || "";
+
   if (headerUser) {
+    // If password is already a raw "UserId <hash>", use it directly
+    if (headerPass.startsWith("UserId ") || headerPass.startsWith("Basic ")) {
+      const authHeader = headerPass.startsWith("Basic ")
+        ? headerPass
+        : createBasicAuthHeader(headerUser, headerPass);
+      return { authHeader, apiUrl: apiUrl.replace(/\/+$/, "") };
+    }
+
+    // Otherwise, perform login handshake via /api/connect/login to obtain security UserId
+    const userId = await loginToHelios(apiUrl, headerUser, headerPass, {
+      dbProfile: normHeaders["x-helios-dbprofile"],
+      serverURL: normHeaders["x-helios-serverurl"],
+      languageId: normHeaders["x-helios-language"],
+    });
+
     return {
-      authHeader: createBasicAuthHeader(headerUser, headerPass),
+      authHeader: createBasicAuthHeader(headerUser, userId),
       apiUrl: apiUrl.replace(/\/+$/, ""),
     };
   }
@@ -50,8 +121,15 @@ export async function resolveHeliosCredentials(
   const envUser = process.env.HELIOS_USER || process.env.HELIOS_MCP_USER;
   const envPass = process.env.HELIOS_PASSWORD || process.env.HELIOS_MCP_PASSWORD || "";
   if (envUser) {
+    if (envPass.startsWith("UserId ")) {
+      return {
+        authHeader: createBasicAuthHeader(envUser, envPass),
+        apiUrl: apiUrl.replace(/\/+$/, ""),
+      };
+    }
+    const userId = await loginToHelios(apiUrl, envUser, envPass);
     return {
-      authHeader: createBasicAuthHeader(envUser, envPass),
+      authHeader: createBasicAuthHeader(envUser, userId),
       apiUrl: apiUrl.replace(/\/+$/, ""),
     };
   }
@@ -59,7 +137,7 @@ export async function resolveHeliosCredentials(
   // 4. Fallback to browser session cookie (if called from authenticated web context)
   try {
     const session = await getSession();
-    if (session?.userName) {
+    if (session?.userName && session?.userId) {
       return {
         authHeader: createBasicAuthHeader(session.userName, session.userId),
         apiUrl: (session.serverURL || apiUrl).replace(/\/+$/, ""),
