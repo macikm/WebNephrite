@@ -30,16 +30,37 @@ function errorText(err: unknown) {
   };
 }
 
+/**
+ * Helper to limit and simplify list results to prevent giant raw JSON dumps in AI chats.
+ */
+function formatListResult<T>(
+  entityName: string,
+  list: T[],
+  limit = 10,
+  cleanFn?: (item: T) => any
+) {
+  const total = list.length;
+  const items = (cleanFn ? list.map(cleanFn) : list).slice(0, limit);
+  const result: Record<string, any> = {
+    totalCount: total,
+    [entityName]: items,
+  };
+  if (total > limit) {
+    result.info = `Zobrazeno prvních ${limit} položek z celkových ${total}. DŮLEŽITÉ PRO ASISTENTA: Nikdy nevypisujte uživateli celý surový JSON. Uveďte celkový počet a stručný lidský přehled v češtině.`;
+  }
+  return jsonText(result);
+}
+
 export function registerHeliosTools(server: McpServer) {
   /* =========================================================
    * 1. FAKTURY VYDANÉ (Invoices Issued)
    * ========================================================= */
   server.tool(
     "helios_list_invoices_issued",
-    "Získá seznam vydaných faktur (odběratelských) s možností filtrování",
+    "Získá seznam vydaných faktur (odběratelských). DŮLEŽITÉ: Nikdy uživateli nevypisujte celý surový JSON, odpovězte stručně a lidsky česky.",
     {
-      top: z.number().optional().default(50).describe("Maximální počet záznamů (výchozí 50)"),
-      skip: z.number().optional().default(0).describe("Počet záznamů k přeskočení pro stránkování"),
+      top: z.number().optional().default(50).describe("Maximální počet záznamů"),
+      skip: z.number().optional().default(0).describe("Počet záznamů k přeskočení"),
       unpaidOnly: z.boolean().optional().describe("Filtrovat pouze neuhrazené faktury"),
       customerName: z.string().optional().describe("Filtrovat podle názvu odběratele"),
     },
@@ -60,7 +81,15 @@ export function registerHeliosTools(server: McpServer) {
           list = list.filter((i) => (i.customer?.name || "").toLowerCase().includes(q));
         }
 
-        return jsonText({ total: list.length, invoices: list });
+        return formatListResult("invoices", list, 10, (i) => ({
+          id: i.id,
+          number: i.number,
+          customer: i.customer?.name,
+          totalAmount: i.totalAmount,
+          outstandingAmount: i.outstandingAmount,
+          dueDate: i.dueDate,
+          status: i.invPaymentStatusCode,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -69,7 +98,7 @@ export function registerHeliosTools(server: McpServer) {
 
   server.tool(
     "helios_get_invoice_issued",
-    "Získá kompletní detail konkrétní vydané faktury včetně položek a odběratele",
+    "Získá detail konkrétní vydané faktury včetně položek a odběratele",
     {
       id: z.number().describe("ID vydané faktury"),
     },
@@ -183,7 +212,7 @@ export function registerHeliosTools(server: McpServer) {
    * ========================================================= */
   server.tool(
     "helios_list_invoices_received",
-    "Získá seznam přijatých faktur (od dodavatelů / závazky) s možností filtrování",
+    "Získá seznam přijatých faktur (od dodavatelů). DŮLEŽITÉ: Nikdy uživateli nevypisujte celý surový JSON, odpovězte stručně a lidsky česky.",
     {
       top: z.number().optional().default(50).describe("Maximální počet záznamů"),
       skip: z.number().optional().default(0).describe("Počet přeskočených záznamů"),
@@ -207,7 +236,15 @@ export function registerHeliosTools(server: McpServer) {
           list = list.filter((i) => ((i.supplier?.name || i.customer?.name || "") as string).toLowerCase().includes(q));
         }
 
-        return jsonText({ total: list.length, invoices: list });
+        return formatListResult("invoices", list, 10, (i) => ({
+          id: i.id,
+          number: i.number,
+          supplier: i.supplier?.name || i.customer?.name,
+          totalAmount: i.totalAmount,
+          outstandingAmount: i.outstandingAmount,
+          dueDate: i.dueDate,
+          status: i.invPaymentStatusCode,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -274,7 +311,7 @@ export function registerHeliosTools(server: McpServer) {
    * ========================================================= */
   server.tool(
     "helios_list_orders_received",
-    "Získá seznam přijatých objednávek (od zákazníků)",
+    "Získá seznam přijatých objednávek (od zákazníků). DŮLEŽITÉ: Nikdy nevypisujte surový JSON, odpovězte stručným lidským přehledem.",
     {
       top: z.number().optional().default(50),
       skip: z.number().optional().default(0),
@@ -286,7 +323,14 @@ export function registerHeliosTools(server: McpServer) {
           headers: extractHeaders(extra),
         });
         const list = res.data?.data || res.data?.ordersReceived || (Array.isArray(res.data) ? res.data : []);
-        return jsonText({ total: list.length, orders: list });
+        return formatListResult("orders", list, 10, (o) => ({
+          id: o.id,
+          orderNumber: o.orderNumber || o.number,
+          customer: o.customerName || o.customer?.name,
+          totalAmount: o.totalAmount,
+          orderDate: o.orderDate,
+          status: o.status,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -345,7 +389,7 @@ export function registerHeliosTools(server: McpServer) {
 
   server.tool(
     "helios_list_orders_issued",
-    "Získá seznam vydaných objednávek (dodavatelům)",
+    "Získá seznam vydaných objednávek (dodavatelům). DŮLEŽITÉ: Nikdy nevypisujte surový JSON, odpovězte stručně.",
     {
       top: z.number().optional().default(50),
       skip: z.number().optional().default(0),
@@ -357,7 +401,13 @@ export function registerHeliosTools(server: McpServer) {
           headers: extractHeaders(extra),
         });
         const list = res.data?.data || res.data?.ordersIssued || (Array.isArray(res.data) ? res.data : []);
-        return jsonText({ total: list.length, orders: list });
+        return formatListResult("orders", list, 10, (o) => ({
+          id: o.id,
+          orderNumber: o.orderNumber || o.number,
+          totalAmount: o.totalAmount,
+          orderDate: o.orderDate,
+          status: o.status,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -385,7 +435,7 @@ export function registerHeliosTools(server: McpServer) {
    * ========================================================= */
   server.tool(
     "helios_search_customers",
-    "Vyhledá partnery/zákazníky/dodavatele podle názvu, IČO nebo DIČ",
+    "Vyhledá partnery/zákazníky/dodavatele v Heliosu podle názvu, IČO nebo DIČ. DŮLEŽITÉ: Nikdy uživateli nevypisujte celý surový JSON. Odpovězte lidsky česky – souhrnným počtem, krátkým shrnutím nebo stručným přehledem.",
     {
       query: z.string().optional().describe("Hledaný text (název firmy, IČO, DIČ, město)"),
       top: z.number().optional().default(50).describe("Maximální počet výsledků"),
@@ -431,7 +481,13 @@ export function registerHeliosTools(server: McpServer) {
           );
         }
 
-        return jsonText({ total: list.length, customers: list });
+        return formatListResult("customers", list, 10, (c) => ({
+          id: c.id,
+          number: c.number,
+          name: c.name,
+          tin: c.tin,
+          city: c.city,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -488,7 +544,7 @@ export function registerHeliosTools(server: McpServer) {
    * ========================================================= */
   server.tool(
     "helios_list_contacts",
-    "Získá seznam kontaktních osob s možností vyhledávání dle jména nebo ID firmy",
+    "Získá seznam kontaktních osob. DŮLEŽITÉ: Nikdy nevypisujte surový JSON, odpovězte stručně a lidsky česky.",
     {
       companyId: z.number().optional().describe("ID společnosti pro filtrování kontaktů"),
       search: z.string().optional().describe("Hledané jméno, příjmení nebo e-mail"),
@@ -516,7 +572,14 @@ export function registerHeliosTools(server: McpServer) {
           );
         }
 
-        return jsonText({ total: list.length, contacts: list });
+        return formatListResult("contacts", list, 10, (c) => ({
+          id: c.id,
+          name: c.name,
+          company: c.company?.name,
+          email: c.email,
+          phone: c.phone,
+          position: c.position,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -564,7 +627,7 @@ export function registerHeliosTools(server: McpServer) {
    * ========================================================= */
   server.tool(
     "helios_list_products",
-    "Získá seznam produktů, ceníků a skladových karet",
+    "Získá seznam produktů, ceníků a skladových karet. DŮLEŽITÉ: Nikdy nevypisujte surový JSON, odpovězte stručně a lidsky česky.",
     {
       query: z.string().optional().describe("Hledaný název nebo referenční kód"),
       top: z.number().optional().default(50),
@@ -593,7 +656,13 @@ export function registerHeliosTools(server: McpServer) {
           );
         }
 
-        return jsonText({ total: list.length, products: list });
+        return formatListResult("products", list, 10, (p) => ({
+          id: p.id,
+          referenceId: p.referenceId,
+          name: p.name,
+          price: p.price || p.unitPrice,
+          measureUnit: p.measureUnit,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -621,7 +690,7 @@ export function registerHeliosTools(server: McpServer) {
    * ========================================================= */
   server.tool(
     "helios_list_job_orders",
-    "Získá přehled zakázek v Helios Nephrite včetně zákazníka a rozpočtu",
+    "Získá přehled zakázek v Helios Nephrite. DŮLEŽITÉ: Nikdy nevypisujte surový JSON, odpovězte stručně a lidsky česky.",
     {
       top: z.number().optional().default(50),
       skip: z.number().optional().default(0),
@@ -640,7 +709,14 @@ export function registerHeliosTools(server: McpServer) {
           list = list.filter((j) => (j.number || "").toLowerCase().includes(q) || (j.name || "").toLowerCase().includes(q));
         }
 
-        return jsonText({ total: list.length, jobOrders: list });
+        return formatListResult("jobOrders", list, 10, (j) => ({
+          id: j.id,
+          number: j.number,
+          name: j.name,
+          customer: j.customer?.name,
+          budget: j.budget,
+          status: j.statusCode,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -703,7 +779,7 @@ export function registerHeliosTools(server: McpServer) {
    * ========================================================= */
   server.tool(
     "helios_list_job_tasks",
-    "Získá seznam úkolů vázaných na zakázky",
+    "Získá seznam úkolů vázaných na zakázky. DŮLEŽITÉ: Nikdy nevypisujte surový JSON, odpovězte stručně.",
     {
       jobOrderId: z.number().optional().describe("Filtrovat úkoly konkrétní zakázky"),
       assignedTo: z.string().optional().describe("Filtrovat dle řešitele"),
@@ -725,7 +801,13 @@ export function registerHeliosTools(server: McpServer) {
           list = list.filter((t) => (t.assignedTo || "").toLowerCase().includes(q));
         }
 
-        return jsonText({ total: list.length, tasks: list });
+        return formatListResult("tasks", list, 10, (t) => ({
+          id: t.id,
+          name: t.name,
+          assignedTo: t.assignedTo,
+          dueDate: t.dueDate,
+          plannedHours: t.plannedHours,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -762,7 +844,7 @@ export function registerHeliosTools(server: McpServer) {
    * ========================================================= */
   server.tool(
     "helios_list_documents",
-    "Získá seznam evidovaných dokumentů v DMS (smlouvy, přílohy, skeny)",
+    "Získá seznam evidovaných dokumentů v DMS (smlouvy, přílohy, skeny). DŮLEŽITÉ: Nikdy nevypisujte surový JSON, odpovězte stručně.",
     {
       query: z.string().optional().describe("Hledaný text v názvu dokumentu"),
       top: z.number().optional().default(50),
@@ -795,7 +877,13 @@ export function registerHeliosTools(server: McpServer) {
           hasContent: !!fileContent,
         }));
 
-        return jsonText({ total: cleanList.length, documents: cleanList });
+        return formatListResult("documents", cleanList, 10, (d) => ({
+          id: d.id,
+          name: d.name,
+          fileName: d.fileName,
+          fileContentLength: d.fileContentLength,
+          createdOn: d.createdOn,
+        }));
       } catch (err) {
         return errorText(err);
       }
@@ -881,7 +969,7 @@ export function registerHeliosTools(server: McpServer) {
    * ========================================================= */
   server.tool(
     "helios_get_dashboard_summary",
-    "Vrátí rychlý manažerský přehled: stav pohledávek a závazků, neuhrazené faktury, počet zakázek",
+    "Vrátí rychlý manažerský přehled: stav pohledávek a závazků, neuhrazené faktury, počet zakázek. Odpovězte lidsky česky ve stručném přehledu.",
     {},
     async (_, extra) => {
       try {
