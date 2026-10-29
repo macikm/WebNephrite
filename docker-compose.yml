@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: webnephrite:latest
+    image: ghcr.io/macikm/webnephrite:latest
     container_name: webnephrite
     restart: unless-stopped
     environment:

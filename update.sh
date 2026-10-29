@@ -1,30 +1,24 @@
 #!/bin/bash
-# update.sh - Skript pro kontrolu nového kódu z Git repozitáře a automatickou aktualizaci Docker kontejneru WebNephrite
+# update.sh - Skript pro bleskovou aktualizaci WebNephrite stažením předpřipraveného Docker image
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Kontroluji aktualizace z Git repozitáře..."
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🔄 Kontroluji a stahuji nejnovější kód z Git repozitáře..."
+git pull origin main
 
-# Stáhnout informace o změnách na origin/main
-git fetch origin main
-
-LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/main)
-
-if [ "$LOCAL" = "$REMOTE" ]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ Repozitář je aktuální. Žádné nové změny."
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] 📦 Stahuji předpřipravený Docker image z GitHub Packages..."
+if command -v docker-compose &> /dev/null; then
+    docker-compose pull
+    docker-compose up -d
 else
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🔄 Zjištěna nová verze na Gitu. Aktualizuji..."
-    git pull origin main
-
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🛠️ Rebuilduji a restartuji Docker kontejner WebNephrite..."
-    if command -v docker-compose &> /dev/null; then
-        docker-compose up -d --build
-    else
-        docker compose up -d --build
-    fi
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🎉 Aktualizace úspěšně dokončena!"
+    docker compose pull
+    docker compose up -d
 fi
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🧹 Promazávám staré nepoužívané image..."
+docker image prune -f
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🎉 Blesková aktualizace dokončena za pár vteřin bez zátěže procesoru!"
