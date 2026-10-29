@@ -147,7 +147,7 @@ export async function resolveHeliosCredentials(
     if (session?.userName && session?.userId) {
       return {
         authHeader: createBasicAuthHeader(session.userName, session.userId),
-        apiUrl: (session.serverURL || apiUrl).replace(/\/+$/, ""),
+        apiUrl: apiUrl.replace(/\/+$/, ""),
       };
     }
   } catch {
